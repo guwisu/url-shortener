@@ -1,10 +1,13 @@
 import uvicorn
 from fastapi import FastAPI
 
-app = FastAPI()
+app = FastAPI(
+    title="url-shortener",
+    version="0.1.0",
+)
 
 @app.get("/health")
-def health():
+def health_check():
     return {"status": "OK"}
 
 if __name__ == '__main__':
