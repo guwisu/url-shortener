@@ -10,7 +10,7 @@ class Settings(BaseSettings):
 
 
     @property
-    def db_url(self):
+    def db_url(self) -> str:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
 
