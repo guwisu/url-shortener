@@ -12,6 +12,6 @@ def health_check():
 
 if __name__ == '__main__':
     uvicorn.run(
-        app="main:app",
+        app="url_shortener.main:app",
         reload=True
     )
