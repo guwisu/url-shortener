@@ -13,7 +13,7 @@ router = APIRouter(prefix="/links", tags=["links"])
 async def get_link_service(session: Annotated[AsyncSession, Depends(get_db)]) -> LinkService:
     return LinkService(session)
 
-@router.post("/", response_model=LinkResponse)
+@router.post("", response_model=LinkResponse)
 async def create_link(
     payload: LinkCreate,
     service: Annotated[LinkService, Depends(get_link_service)]
