@@ -1,24 +1,19 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from url_shortener.db.session import get_db
+from url_shortener.api.dependencies import get_link_service
 from url_shortener.schemas.links import LinkCreate, LinkResponse
 from url_shortener.services import LinkService
 
 router = APIRouter(prefix="/links", tags=["links"])
-
-
-async def get_link_service(session: Annotated[AsyncSession, Depends(get_db)]) -> LinkService:
-    return LinkService(session)
 
 @router.post("", response_model=LinkResponse)
 async def create_link(
     payload: LinkCreate,
     service: Annotated[LinkService, Depends(get_link_service)]
 ):
-    return await service.create_link(payload.url)
+    return await service.create_link(str(payload.url))
 
 @router.get("/{code}", response_model=LinkResponse)
 async def get_by_code(

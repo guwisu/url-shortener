@@ -1,10 +1,10 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, HttpUrl
 
 
 class LinkCreate(BaseModel):
-    url: str
+    url: HttpUrl
 
 
 class LinkResponse(BaseModel):
