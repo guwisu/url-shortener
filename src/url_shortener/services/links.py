@@ -8,7 +8,13 @@ class LinkService:
         self.repo = repository 
 
     async def create_link(self, original_url: str) -> LinkResponse:
-        short_code = generate_short_code()
+        for _ in range(5):
+            short_code = generate_short_code()
+            test_code_collision = await self.repo.get_by_code(short_code)
+            if not test_code_collision:
+                break
+        
+        
         model = await self.repo.add(original_url, short_code)
         await self.repo.commit()
         return LinkResponse.model_validate(model)
