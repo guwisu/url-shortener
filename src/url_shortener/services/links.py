@@ -5,16 +5,16 @@ from url_shortener.utils.code_generator import generate_short_code
 
 class LinkService:
     def __init__(self, repository: LinkRepository):
-        self.repository = repository 
+        self.repo = repository 
 
     async def create_link(self, original_url: str) -> LinkResponse:
         short_code = generate_short_code()
-        model = await self.repository.add(original_url, short_code)
-        await self.repository.session.commit()
+        model = await self.repo.add(original_url, short_code)
+        await self.repo.commit()
         return LinkResponse.model_validate(model)
 
     async def get_by_code(self, code: str) -> LinkResponse | None:
-        model = await self.repository.get_by_code(code)
+        model = await self.repo.get_by_code(code)
         if model:
             return LinkResponse.model_validate(model)
         return None
