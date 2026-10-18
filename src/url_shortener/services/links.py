@@ -24,3 +24,10 @@ class LinkService:
         if model:
             return LinkResponse.model_validate(model)
         return None
+
+    async def get_and_increment_clicks(self, code: str) -> LinkResponse | None:
+        model = await self.repo.get_and_increment_clicks(code)
+        if model:
+            await self.repo.commit()
+            return LinkResponse.model_validate(model)
+        return None   
