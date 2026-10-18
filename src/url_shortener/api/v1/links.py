@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
 
 from url_shortener.api.dependencies import get_link_service
@@ -23,13 +23,17 @@ async def get_by_code(
     code: str,
     service: Annotated[LinkService, Depends(get_link_service)]
 ):
-    return await service.get_by_code(code)
-
+    link = await service.get_by_code(code)
+    if not link:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link not found")
+    return link
+    
 @redirect_router.get("/{code}")
 async def redirect_by_code(
     code: str,
     service: Annotated[LinkService, Depends(get_link_service)]
 ):
     link_data = await service.get_by_code(code)
-
-    return RedirectResponse(url=link_data.original_url, status_code=307)
+    if not link_data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link not found")
+    return RedirectResponse(url=link_data.original_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
