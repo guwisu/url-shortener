@@ -17,7 +17,7 @@ class LinkService:
                 await self.repo.commit()
                 return LinkResponse.model_validate(model)
             except IntegrityError:
-                await self.repo.session.rollback()
+                await self.repo.rollback()
                 continue
                 
         raise RuntimeError("Could not generate unique short code")
