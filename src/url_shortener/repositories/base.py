@@ -1,8 +1,10 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from url_shortener.models import Base
 
-class BaseRepository:
-    model = None
+
+class BaseRepository[ModelType: Base]:
+    model: type[ModelType]
 
     def __init__(self, session: AsyncSession):
         self.session = session

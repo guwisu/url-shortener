@@ -4,7 +4,7 @@ from url_shortener.models import Link
 from url_shortener.repositories.base import BaseRepository
 
 
-class LinkRepository(BaseRepository):
+class LinkRepository(BaseRepository[Link]):
     model = Link
 
     async def add(self, original_url: str, short_code: str) -> Link:
