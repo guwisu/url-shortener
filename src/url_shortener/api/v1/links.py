@@ -11,7 +11,7 @@ router = APIRouter(prefix="/links", tags=["links"])
 
 redirect_router = APIRouter(tags=["links"])
 
-@router.post("", response_model=LinkResponse)
+@router.post("", response_model=LinkResponse, status_code=status.HTTP_201_CREATED)
 async def create_link(
     payload: LinkCreate,
     service: Annotated[LinkService, Depends(get_link_service)]
