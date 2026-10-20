@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, HttpUrl
 
 class LinkCreate(BaseModel):
     url: HttpUrl
-
+    expires_at: datetime | None = None
 
 class LinkResponse(BaseModel):
     id: int
@@ -13,5 +13,7 @@ class LinkResponse(BaseModel):
     short_code: str
     created_at: datetime
     clicks_count: int
-
+    is_active: bool
+    expires_at: datetime | None
+    
     model_config = ConfigDict(from_attributes=True)
