@@ -16,7 +16,7 @@ async def create_link(
     payload: LinkCreate,
     service: Annotated[LinkService, Depends(get_link_service)]
 ):
-    return await service.create_link(str(payload.url))
+    return await service.create_link(str(payload.url), payload.expires_at)
 
 @router.get("/{code}", response_model=LinkResponse)
 async def get_by_code(
