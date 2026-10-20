@@ -1,4 +1,3 @@
-from opentelemetry.metrics import NoOpCounter
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from url_shortener.models import Base
