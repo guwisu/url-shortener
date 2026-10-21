@@ -14,12 +14,12 @@ class LinkService:
     async def create_link(
         self, 
         original_url: str, 
-        expired_at: datetime | None
+        expires_at: datetime | None
     ) -> LinkResponse:
         for _ in range(5):
             short_code = generate_short_code()
             try:
-                model = await self.repo.add(original_url, short_code, expired_at)
+                model = await self.repo.add(original_url, short_code, expires_at)
                 await self.repo.commit()
                 return LinkResponse.model_validate(model)
             except IntegrityError:

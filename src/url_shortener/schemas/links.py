@@ -1,11 +1,11 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, HttpUrl
+from pydantic import BaseModel, ConfigDict, HttpUrl, FutureDatetime
 
 
 class LinkCreate(BaseModel):
     url: HttpUrl
-    expires_at: datetime | None = None
+    expires_at: FutureDatetime | None = None
 
 class LinkResponse(BaseModel):
     id: int
