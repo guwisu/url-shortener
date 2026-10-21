@@ -7,7 +7,37 @@ on:
     branches: [main]
 
 jobs:
-  lint-and-test:
+  quality:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      - name: Run Ruff linter
+        run: uv run ruff check .
+
+      - name: Run Ruff formatter check
+        run: uv run ruff format --check .
+
+      - name: Run Mypy
+        run: uv run mypy src
+
+  tests:
+    name: Pytest with PostgreSQL
+    needs: quality
     runs-on: ubuntu-latest
 
     services:
@@ -46,15 +76,6 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --all-groups
-
-      - name: Run Ruff linter
-        run: uv run ruff check .
-
-      - name: Run Ruff formatter check
-        run: uv run ruff format --check .
-
-      - name: Run Mypy
-        run: uv run mypy src
 
       - name: Apply Alembic migrations
         run: uv run alembic upgrade head
