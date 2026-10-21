@@ -24,11 +24,11 @@ class Link(Base):
         nullable=False,
     )
     is_active: Mapped[bool] = mapped_column(
-        default=True, 
+        default=True,
         server_default=text("true"),
     )
     expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         default=None,
         nullable=True,
-        )
+    )

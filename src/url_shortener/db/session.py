@@ -9,10 +9,7 @@ async_engine = create_async_engine(
     echo=False,
 )
 
-async_session_factory = async_sessionmaker(
-    bind=async_engine,
-    expire_on_commit=False
-)
+async_session_factory = async_sessionmaker(bind=async_engine, expire_on_commit=False)
 
 
 async def get_db() -> AsyncGenerator[AsyncSession]:
