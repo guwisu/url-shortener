@@ -8,6 +8,7 @@ from url_shortener.db.session import get_db
 
 router = APIRouter(tags=["Health"])
 
+
 @router.get("/health")
 async def health_check(session: Annotated[AsyncSession, Depends(get_db)]):
     await check_db(session)
