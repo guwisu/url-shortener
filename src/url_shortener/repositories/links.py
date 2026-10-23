@@ -11,6 +11,7 @@ class LinkRepository(BaseRepository[Link]):
 
     async def add(
         self,
+        user_id: int,
         original_url: str,
         short_code: str,
         expires_at: datetime | None = None,
@@ -18,6 +19,7 @@ class LinkRepository(BaseRepository[Link]):
         stmt = (
             insert(self.model)
             .values(
+                user_id=user_id,
                 original_url=original_url,
                 short_code=short_code,
                 expires_at=expires_at,
@@ -27,8 +29,14 @@ class LinkRepository(BaseRepository[Link]):
         result = await self.session.execute(stmt)
         return result.scalar_one()
 
-    async def get_by_code(self, code: str) -> Link | None:
-        query = select(self.model).where(self.model.short_code == code)
+    async def get_by_code(
+        self, 
+        code: str
+    ) -> Link | None:
+        query = (
+            select(self.model).
+            where(self.model.short_code == code)
+        )
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
@@ -52,3 +60,12 @@ class LinkRepository(BaseRepository[Link]):
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def get_all_by_user(self, user_id: int) -> list[Link]:
+        query = (
+            select(self.model)
+            .where(self.model.user_id == user_id)
+            .order_by(self.model.user_id.desc())
+        )
+        models = await self.session.execute(query)
+        return list(models.scalars().all())

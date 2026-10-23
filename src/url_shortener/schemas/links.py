@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, FutureDatetime, HttpUrl
 
 
 class LinkCreate(BaseModel):
+    user_id: int
     url: HttpUrl
     expires_at: FutureDatetime | None = None
 

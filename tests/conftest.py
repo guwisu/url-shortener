@@ -19,9 +19,9 @@ from url_shortener.main import app
 @pytest.fixture(scope="session", autouse=True)
 def run_migrations_for_tests() -> None:
     alembic_cfg = Config("alembic.ini")
-    
+
     alembic_cfg.set_main_option("sqlalchemy.url", settings.test_db_url)
-    
+
     command.upgrade(alembic_cfg, "head")
 
 
@@ -33,7 +33,9 @@ test_session_factory = async_sessionmaker(bind=test_engine, expire_on_commit=Fal
 async def clean_database() -> AsyncGenerator[None]:
     yield
     async with test_session_factory() as session:
-        await session.execute(text("TRUNCATE TABLE links, users RESTART IDENTITY CASCADE;"))
+        await session.execute(
+            text("TRUNCATE TABLE links, users RESTART IDENTITY CASCADE;")
+        )
         await session.commit()
 
 
