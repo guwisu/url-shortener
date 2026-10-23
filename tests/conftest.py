@@ -1,6 +1,8 @@
 from collections.abc import AsyncGenerator
 
 import pytest
+from alembic import command
+from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
@@ -14,17 +16,31 @@ from url_shortener.db.session import get_db
 from url_shortener.main import app
 
 
-@pytest.fixture
-async def db_session() -> AsyncGenerator[AsyncSession]:
-    engine = create_async_engine(settings.db_url, echo=False)
-    session_factory = async_sessionmaker(bind=engine, expire_on_commit=False)
+@pytest.fixture(scope="session", autouse=True)
+def run_migrations_for_tests() -> None:
+    alembic_cfg = Config("alembic.ini")
+    
+    alembic_cfg.set_main_option("sqlalchemy.url", settings.test_db_url)
+    
+    command.upgrade(alembic_cfg, "head")
 
-    async with session_factory() as session:
-        yield session
-        await session.execute(text("TRUNCATE TABLE links RESTART IDENTITY CASCADE;"))
+
+test_engine = create_async_engine(settings.test_db_url, echo=False)
+test_session_factory = async_sessionmaker(bind=test_engine, expire_on_commit=False)
+
+
+@pytest.fixture(autouse=True)
+async def clean_database() -> AsyncGenerator[None]:
+    yield
+    async with test_session_factory() as session:
+        await session.execute(text("TRUNCATE TABLE links, users RESTART IDENTITY CASCADE;"))
         await session.commit()
 
-    await engine.dispose()
+
+@pytest.fixture
+async def db_session() -> AsyncGenerator[AsyncSession]:
+    async with test_session_factory() as session:
+        yield session
 
 
 @pytest.fixture
