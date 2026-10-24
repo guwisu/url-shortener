@@ -11,7 +11,6 @@ class UserCreate(BaseModel):
 class UserResponse(BaseModel):
     id: int
     email: EmailStr
-    hashed_password: str
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
