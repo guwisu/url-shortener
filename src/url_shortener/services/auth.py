@@ -1,6 +1,35 @@
-from url_shortener.repositories.users import UserRepository
+
+from fastapi import HTTPException
+
+from url_shortener.core.security import (
+    create_access_token,
+    hash_password,
+    verify_password,
+)
+from url_shortener.repositories import UserRepository
+from url_shortener.schemas import TokenResponse, UserResponse
 
 
 class AuthService:
     def __init__(self, repository: UserRepository):
         self.repo = repository
+
+    async def register(self, email: str, password: str) -> UserResponse:
+        test_user = await self.repo.get_by_email(email)
+        if test_user:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        hashed_password = hash_password(password)
+        user = await self.repo.add(email, hashed_password)
+        await self.repo.commit()
+        return UserResponse.model_validate(user)
+
+    async def login(self, email: str, password: str) -> TokenResponse:
+        user = await self.repo.get_by_email(email)
+        if user is None:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+        if not verify_password(password, user.hashed_password):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+            
+        token = create_access_token(user.id)
+        return TokenResponse(access_token=token)
+            
