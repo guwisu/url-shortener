@@ -11,7 +11,6 @@ class LinkRepository(BaseRepository[Link]):
 
     async def add(
         self,
-        user_id: int,
         original_url: str,
         short_code: str,
         expires_at: datetime | None = None,
@@ -19,7 +18,6 @@ class LinkRepository(BaseRepository[Link]):
         stmt = (
             insert(self.model)
             .values(
-                user_id=user_id,
                 original_url=original_url,
                 short_code=short_code,
                 expires_at=expires_at,

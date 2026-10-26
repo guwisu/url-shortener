@@ -12,13 +12,13 @@ class LinkService:
         self.repo = repository
 
     async def create_link(
-        self, user_id: int, original_url: str, expires_at: datetime | None
+        self, original_url: str, expires_at: datetime | None
     ) -> LinkResponse:
         for _ in range(5):
             short_code = generate_short_code()
             try:
                 model = await self.repo.add(
-                    user_id, original_url, short_code, expires_at
+                    original_url, short_code, expires_at
                 )
                 await self.repo.commit()
                 return LinkResponse.model_validate(model)
