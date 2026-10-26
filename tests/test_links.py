@@ -17,8 +17,8 @@ async def test_health_check(client: AsyncClient) -> None:
     assert response.json() == {"status": "OK"}
 
 
-async def test_create_and_get_link(client: AsyncClient) -> None:
-    create_resp = await client.post(
+async def test_create_and_get_link(authorized_client: AsyncClient) -> None:
+    create_resp = await authorized_client.post(
         "/api/v1/links",
         json={"url": "https://example.com/some/path"},
     )
@@ -29,32 +29,34 @@ async def test_create_and_get_link(client: AsyncClient) -> None:
     assert data["is_active"] is True
     code = data["short_code"]
 
-    get_resp = await client.get(f"/api/v1/links/{code}")
+    get_resp = await authorized_client.get(f"/api/v1/links/{code}")
     assert get_resp.status_code == 200
     assert get_resp.json()["short_code"] == code
 
 
-async def test_create_link_past_expiration_fails(client: AsyncClient) -> None:
+async def test_create_link_past_expiration_fails(
+    authorized_client: AsyncClient,
+) -> None:
     past_date = (datetime.now(UTC) - timedelta(days=1)).isoformat()
-    response = await client.post(
+    response = await authorized_client.post(
         "/api/v1/links",
         json={"url": "https://example.com", "expires_at": past_date},
     )
     assert response.status_code == 422
 
 
-async def test_redirect_increments_clicks(client: AsyncClient) -> None:
-    create_resp = await client.post(
+async def test_redirect_increments_clicks(authorized_client: AsyncClient) -> None:
+    create_resp = await authorized_client.post(
         "/api/v1/links",
         json={"url": "https://example.com/target"},
     )
     code = create_resp.json()["short_code"]
 
-    redirect_resp = await client.get(f"/{code}")
+    redirect_resp = await authorized_client.get(f"/{code}")
     assert redirect_resp.status_code == 307
     assert redirect_resp.headers["location"] == "https://example.com/target"
 
-    info_resp = await client.get(f"/api/v1/links/{code}")
+    info_resp = await authorized_client.get(f"/api/v1/links/{code}")
     assert info_resp.json()["clicks_count"] == 1
 
 

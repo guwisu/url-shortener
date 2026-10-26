@@ -3,7 +3,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
 
-from url_shortener.api.dependencies import get_link_service
+from url_shortener.api.dependencies import get_current_user, get_link_service
+from url_shortener.models import User
 from url_shortener.schemas.links import LinkCreate, LinkResponse
 from url_shortener.services import LinkService
 
@@ -14,9 +15,11 @@ redirect_router = APIRouter(tags=["links"])
 
 @router.post("", response_model=LinkResponse, status_code=status.HTTP_201_CREATED)
 async def create_link(
-    payload: LinkCreate, service: Annotated[LinkService, Depends(get_link_service)]
+    body: LinkCreate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    service: Annotated[LinkService, Depends(get_link_service)],
 ):
-    return await service.create_link(str(payload.url), payload.expires_at)
+    return await service.create_link(current_user.id, str(body.url), body.expires_at)
 
 
 @router.get("/{code}", response_model=LinkResponse)
