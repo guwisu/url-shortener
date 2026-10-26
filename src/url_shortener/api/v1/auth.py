@@ -8,17 +8,18 @@ from url_shortener.services import AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+)
 async def register(
-    body: UserCreate,
-    service: Annotated[AuthService, Depends(get_auth_service)]
+    body: UserCreate, service: Annotated[AuthService, Depends(get_auth_service)]
 ) -> UserResponse:
     return await service.register(body.email, body.password)
 
 
 @router.post("/login", response_model=TokenResponse)
 async def login(
-    body: UserCreate,
-    service: Annotated[AuthService, Depends(get_auth_service)]
+    body: UserCreate, service: Annotated[AuthService, Depends(get_auth_service)]
 ) -> TokenResponse:
     return await service.login(body.email, body.password)

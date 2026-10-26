@@ -1,4 +1,3 @@
-
 from fastapi import HTTPException
 
 from url_shortener.core.security import (
@@ -29,7 +28,6 @@ class AuthService:
             raise HTTPException(status_code=401, detail="Invalid credentials")
         if not verify_password(password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Invalid credentials")
-            
+
         token = create_access_token(user.id)
         return TokenResponse(access_token=token)
-            

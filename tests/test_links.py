@@ -34,7 +34,9 @@ async def test_create_and_get_link(authorized_client: AsyncClient) -> None:
     assert get_resp.json()["short_code"] == code
 
 
-async def test_create_link_past_expiration_fails(authorized_client: AsyncClient) -> None:
+async def test_create_link_past_expiration_fails(
+    authorized_client: AsyncClient,
+) -> None:
     past_date = (datetime.now(UTC) - timedelta(days=1)).isoformat()
     response = await authorized_client.post(
         "/api/v1/links",
@@ -64,4 +66,3 @@ async def test_not_found_link(client: AsyncClient) -> None:
 
     resp_redirect = await client.get("/nonexistent")
     assert resp_redirect.status_code == 404
-

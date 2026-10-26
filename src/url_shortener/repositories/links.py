@@ -29,14 +29,8 @@ class LinkRepository(BaseRepository[Link]):
         result = await self.session.execute(stmt)
         return result.scalar_one()
 
-    async def get_by_code(
-        self, 
-        code: str
-    ) -> Link | None:
-        query = (
-            select(self.model).
-            where(self.model.short_code == code)
-        )
+    async def get_by_code(self, code: str) -> Link | None:
+        query = select(self.model).where(self.model.short_code == code)
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 

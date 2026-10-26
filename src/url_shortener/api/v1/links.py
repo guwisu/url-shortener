@@ -17,7 +17,7 @@ redirect_router = APIRouter(tags=["links"])
 async def create_link(
     body: LinkCreate,
     current_user: Annotated[User, Depends(get_current_user)],
-    service: Annotated[LinkService, Depends(get_link_service)]
+    service: Annotated[LinkService, Depends(get_link_service)],
 ):
     return await service.create_link(current_user.id, str(body.url), body.expires_at)
 

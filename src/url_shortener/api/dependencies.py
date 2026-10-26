@@ -35,11 +35,13 @@ def get_auth_service(
 ) -> AuthService:
     return AuthService(repository)
 
+
 oauth2_scheme = HTTPBearer()
 
+
 async def get_current_user(
-    token: HTTPAuthorizationCredentials = Depends(oauth2_scheme),
-    repo: UserRepository = Depends(get_user_repository),
+    token: Annotated[HTTPAuthorizationCredentials, Depends(oauth2_scheme)],
+    repo: Annotated[UserRepository, Depends(get_user_repository)],
 ) -> User:
     decoded_token = decode_access_token(token.credentials)
     if decoded_token is None:
