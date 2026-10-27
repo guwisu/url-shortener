@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import case, delete, insert, or_, select, update
+from sqlalchemy import delete, insert, or_, select, update
 
 from url_shortener.models import Link
 from url_shortener.repositories.base import BaseRepository
@@ -59,7 +59,7 @@ class LinkRepository(BaseRepository[Link]):
         query = (
             select(self.model)
             .where(self.model.user_id == user_id)
-            .order_by(self.model.user_id.desc())
+            .order_by(self.model.id.desc())
         )
         models = await self.session.execute(query)
         return list(models.scalars().all())
@@ -67,25 +67,19 @@ class LinkRepository(BaseRepository[Link]):
     async def delete_user_link(self, user_id: int, link_id: int) -> Link | None:
         stmt = (
             delete(self.model)
-            .where(
-                self.model.user_id == user_id,
-                self.model.id == link_id
-            )
+            .where(self.model.user_id == user_id, self.model.id == link_id)
             .returning(self.model)
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
-    
+
     async def deactivate_user_link(self, user_id: int, link_id: int) -> Link | None:
         stmt = (
             update(self.model)
             .values(
                 is_active=False,
-                )
-            .where(
-                self.model.user_id == user_id,
-                self.model.id == link_id
             )
+            .where(self.model.user_id == user_id, self.model.id == link_id)
             .returning(self.model)
         )
         result = await self.session.execute(stmt)
@@ -96,11 +90,8 @@ class LinkRepository(BaseRepository[Link]):
             update(self.model)
             .values(
                 is_active=True,
-                )
-            .where(
-                self.model.user_id == user_id,
-                self.model.id == link_id
             )
+            .where(self.model.user_id == user_id, self.model.id == link_id)
             .returning(self.model)
         )
         result = await self.session.execute(stmt)

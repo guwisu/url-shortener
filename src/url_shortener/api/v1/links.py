@@ -47,28 +47,32 @@ async def redirect_by_code(
         url=link_data.original_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT
     )
 
+
 @router.get("")
 async def get_all_by_user(
     current_user: Annotated[User, Depends(get_current_user)],
-    service: Annotated[LinkService, Depends(get_link_service)]
+    service: Annotated[LinkService, Depends(get_link_service)],
 ) -> list[LinkResponse]:
     return await service.get_all_by_user(current_user.id)
+
 
 @router.delete("/{link_id}", response_model=LinkResponse)
 async def delete_user_link(
     link_id: int,
     current_user: Annotated[User, Depends(get_current_user)],
-    service: Annotated[LinkService, Depends(get_link_service)]
+    service: Annotated[LinkService, Depends(get_link_service)],
 ) -> LinkResponse:
     return await service.delete_user_link(current_user.id, link_id)
+
 
 @router.patch("/{link_id}/deactivate", response_model=LinkResponse)
 async def deactivate_user_link(
     link_id: int,
     current_user: Annotated[User, Depends(get_current_user)],
-    service: Annotated[LinkService, Depends(get_link_service)]
+    service: Annotated[LinkService, Depends(get_link_service)],
 ) -> LinkResponse:
     return await service.deactivate_user_link(current_user.id, link_id)
+
 
 @router.patch("/{link_id}/activate", response_model=LinkResponse)
 async def activate_user_link(

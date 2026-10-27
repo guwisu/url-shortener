@@ -52,7 +52,7 @@ class LinkService:
             raise HTTPException(status_code=404, detail="Link not found")
         await self.repo.commit()
         return LinkResponse.model_validate(result)
-    
+
     async def deactivate_user_link(self, user_id: int, link_id: int) -> LinkResponse:
         result = await self.repo.deactivate_user_link(user_id, link_id)
         if result is None:
