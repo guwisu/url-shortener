@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 
+from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 
 from url_shortener.repositories import LinkRepository
@@ -45,17 +46,23 @@ class LinkService:
         links = await self.repo.get_all_by_user(user_id)
         return list(map(LinkResponse.model_validate, links))
 
-    async def delete_user_link(self, user_id: int, link_id: int) -> LinkResponse | None:
+    async def delete_user_link(self, user_id: int, link_id: int) -> LinkResponse:
         result = await self.repo.delete_user_link(user_id, link_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Link not found")
         await self.repo.commit()
         return LinkResponse.model_validate(result)
     
-    async def deactivate_user_link(self, user_id: int, link_id: int) -> LinkResponse | None:
+    async def deactivate_user_link(self, user_id: int, link_id: int) -> LinkResponse:
         result = await self.repo.deactivate_user_link(user_id, link_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Link not found")
         await self.repo.commit()
         return LinkResponse.model_validate(result)
 
-    async def activate_user_link(self, user_id: int, link_id: int) -> LinkResponse | None:
+    async def activate_user_link(self, user_id: int, link_id: int) -> LinkResponse:
         result = await self.repo.activate_user_link(user_id, link_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Link not found")
         await self.repo.commit()
         return LinkResponse.model_validate(result)
