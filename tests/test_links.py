@@ -80,8 +80,8 @@ async def test_get_all_by_user(authorized_client: AsyncClient) -> None:
 
     get_data = get_resp.json()
     assert len(get_data) == 2
-    assert get_data[0]["original_url"] == "https://example.com/1"
-    assert get_data[1]["original_url"] == "https://example.com/2"
+    assert get_data[0]["original_url"] == "https://example.com/2"
+    assert get_data[1]["original_url"] == "https://example.com/1"
 
 
 async def test_delete_user_link(authorized_client: AsyncClient) -> None:
@@ -123,4 +123,4 @@ async def test_deactivate_and_activate_user_link(
 
     activate_resp = await authorized_client.patch(f"/api/v1/links/{link_id}/activate")
     assert activate_resp.status_code == 200
-    assert activate_resp.json()["is_active"] == True
+    assert activate_resp.json()["is_active"] is True

@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from url_shortener.api.routers.health import router as health_router
 from url_shortener.api.v1 import redirect_router, v1_router
+from url_shortener.core.config import settings
 
 app = FastAPI(
     title="url-shortener",
@@ -12,8 +13,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=settings.CORS_ORIGINS,
     allow_headers=["*"],
     allow_methods=["*"],
 )
