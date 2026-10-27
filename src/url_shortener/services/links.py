@@ -27,7 +27,9 @@ class LinkService:
                 await self.repo.rollback()
                 continue
 
-        raise RuntimeError("Could not generate unique short code")
+        raise HTTPException(
+            status_code=503, detail="Service temporarily unavailable. Please try again."
+        )
 
     async def get_by_code(self, code: str) -> LinkResponse | None:
         model = await self.repo.get_by_code(code)
@@ -35,12 +37,20 @@ class LinkService:
             return LinkResponse.model_validate(model)
         return None
 
-    async def get_and_increment_clicks(self, code: str) -> LinkResponse | None:
-        model = await self.repo.increment_clicks_if_active(code, now=datetime.now(UTC))
-        if model:
-            await self.repo.commit()
-            return LinkResponse.model_validate(model)
-        return None
+    async def get_and_increment_clicks(self, code: str) -> LinkResponse:
+        model = await self.repo.get_by_code(code)
+        if not model:
+            raise HTTPException(status_code=404, detail="Link not found")
+
+        now = datetime.now(UTC)
+        if not model.is_active or (model.expires_at and model.expires_at < now):
+            raise HTTPException(
+                status_code=410, detail="Link has been expired or been deactivated"
+            )
+
+        updated_model = await self.repo.increment_clicks_if_active(code, now=now)
+        await self.repo.commit()
+        return LinkResponse.model_validate(updated_model)
 
     async def get_all_by_user(self, user_id: int) -> list[LinkResponse]:
         links = await self.repo.get_all_by_user(user_id)

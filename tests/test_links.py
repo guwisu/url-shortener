@@ -119,7 +119,7 @@ async def test_deactivate_and_activate_user_link(
     assert deactivate_resp.json()["is_active"] is False
 
     redirect_resp = await authorized_client.get(f"/{short_code}")
-    assert redirect_resp.status_code == 404
+    assert redirect_resp.status_code == 410
 
     activate_resp = await authorized_client.patch(f"/api/v1/links/{link_id}/activate")
     assert activate_resp.status_code == 200

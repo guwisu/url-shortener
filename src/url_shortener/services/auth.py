@@ -1,6 +1,6 @@
 from fastapi import HTTPException
-
 from sqlalchemy.exc import IntegrityError
+
 from url_shortener.core.security import (
     create_access_token,
     hash_password,

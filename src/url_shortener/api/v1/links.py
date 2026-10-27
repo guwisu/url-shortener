@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse
 
 from url_shortener.api.dependencies import get_current_user, get_link_service
 from url_shortener.models import User
-from url_shortener.schemas.links import LinkCreate, LinkResponse
+from url_shortener.schemas.links import LinkCreate, LinkPublic, LinkResponse
 from url_shortener.services import LinkService
 
 router = APIRouter(prefix="/links", tags=["links"])
@@ -22,7 +22,7 @@ async def create_link(
     return await service.create_link(current_user.id, str(body.url), body.expires_at)
 
 
-@router.get("/{code}", response_model=LinkResponse)
+@router.get("/{code}", response_model=LinkPublic)
 async def get_by_code(
     code: str, service: Annotated[LinkService, Depends(get_link_service)]
 ):
@@ -39,10 +39,6 @@ async def redirect_by_code(
     code: str, service: Annotated[LinkService, Depends(get_link_service)]
 ):
     link_data = await service.get_and_increment_clicks(code)
-    if not link_data:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Link not found"
-        )
     return RedirectResponse(
         url=link_data.original_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT
     )
