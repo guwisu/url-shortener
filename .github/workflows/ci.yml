@@ -62,6 +62,8 @@ jobs:
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
 
+      JWT_SECRET_KEY: super-secret-test-key-at-least-32-bytes
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
