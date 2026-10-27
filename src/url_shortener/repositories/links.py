@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import insert, or_, select, update
+from sqlalchemy import case, delete, insert, or_, select, update
 
 from url_shortener.models import Link
 from url_shortener.repositories.base import BaseRepository
@@ -63,3 +63,45 @@ class LinkRepository(BaseRepository[Link]):
         )
         models = await self.session.execute(query)
         return list(models.scalars().all())
+
+    async def delete_user_link(self, user_id: int, link_id: int) -> Link | None:
+        stmt = (
+            delete(self.model)
+            .where(
+                self.model.user_id == user_id,
+                self.model.id == link_id
+            )
+            .returning(self.model)
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+    
+    async def deactivate_user_link(self, user_id: int, link_id: int) -> Link | None:
+        stmt = (
+            update(self.model)
+            .values(
+                is_active=False,
+                )
+            .where(
+                self.model.user_id == user_id,
+                self.model.id == link_id
+            )
+            .returning(self.model)
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def activate_user_link(self, user_id: int, link_id: int) -> Link | None:
+        stmt = (
+            update(self.model)
+            .values(
+                is_active=True,
+                )
+            .where(
+                self.model.user_id == user_id,
+                self.model.id == link_id
+            )
+            .returning(self.model)
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()

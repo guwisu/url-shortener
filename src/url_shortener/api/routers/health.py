@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from url_shortener.db.health import check_db
 from url_shortener.db.session import get_db
 
-router = APIRouter(tags=["Health"])
+router = APIRouter(tags=["health"])
 
 
 @router.get("/health")

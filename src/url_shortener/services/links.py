@@ -40,3 +40,22 @@ class LinkService:
             await self.repo.commit()
             return LinkResponse.model_validate(model)
         return None
+
+    async def get_all_by_user(self, user_id: int) -> list[LinkResponse]:
+        links = await self.repo.get_all_by_user(user_id)
+        return list(map(LinkResponse.model_validate, links))
+
+    async def delete_user_link(self, user_id: int, link_id: int) -> LinkResponse | None:
+        result = await self.repo.delete_user_link(user_id, link_id)
+        await self.repo.commit()
+        return LinkResponse.model_validate(result)
+    
+    async def deactivate_user_link(self, user_id: int, link_id: int) -> LinkResponse | None:
+        result = await self.repo.deactivate_user_link(user_id, link_id)
+        await self.repo.commit()
+        return LinkResponse.model_validate(result)
+
+    async def activate_user_link(self, user_id: int, link_id: int) -> LinkResponse | None:
+        result = await self.repo.activate_user_link(user_id, link_id)
+        await self.repo.commit()
+        return LinkResponse.model_validate(result)
