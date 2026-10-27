@@ -1,5 +1,6 @@
 from fastapi import HTTPException
 
+from sqlalchemy.exc import IntegrityError
 from url_shortener.core.security import (
     create_access_token,
     hash_password,
@@ -14,13 +15,18 @@ class AuthService:
         self.repo = repository
 
     async def register(self, email: str, password: str) -> UserResponse:
-        test_user = await self.repo.get_by_email(email)
+        lower_email = email.lower()
+        test_user = await self.repo.get_by_email(lower_email)
         if test_user:
             raise HTTPException(status_code=400, detail="Email already registered")
         hashed_password = hash_password(password)
-        user = await self.repo.add(email, hashed_password)
-        await self.repo.commit()
-        return UserResponse.model_validate(user)
+        try:
+            user = await self.repo.add(lower_email, hashed_password)
+            await self.repo.commit()
+            return UserResponse.model_validate(user)
+        except IntegrityError:
+            await self.repo.rollback()
+            raise HTTPException(status_code=400, detail="Email already registered")
 
     async def login(self, email: str, password: str) -> TokenResponse:
         user = await self.repo.get_by_email(email)

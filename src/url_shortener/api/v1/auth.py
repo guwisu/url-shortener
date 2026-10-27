@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, status
 
 from url_shortener.api.dependencies import get_auth_service
 from url_shortener.schemas import TokenResponse, UserCreate, UserResponse
+from url_shortener.schemas.users import UserLogin
 from url_shortener.services import AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -20,6 +21,6 @@ async def register(
 
 @router.post("/login", response_model=TokenResponse)
 async def login(
-    body: UserCreate, service: Annotated[AuthService, Depends(get_auth_service)]
+    body: UserLogin, service: Annotated[AuthService, Depends(get_auth_service)]
 ) -> TokenResponse:
     return await service.login(body.email, body.password)
