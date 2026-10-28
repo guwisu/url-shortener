@@ -9,14 +9,10 @@ class LinkCreate(BaseModel):
 
 
 class LinkPublic(BaseModel):
-    id: int
-    user_id: int
     original_url: str
     short_code: str
-    created_at: datetime
     clicks_count: int
     is_active: bool
-    expires_at: datetime | None
 
     model_config = ConfigDict(from_attributes=True)
 
