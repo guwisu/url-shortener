@@ -1,4 +1,4 @@
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Awaitable, Callable
 
 import pytest
 from alembic import command
@@ -22,9 +22,7 @@ from url_shortener.models import User
 @pytest.fixture(scope="session", autouse=True)
 def run_migrations_for_tests() -> None:
     alembic_cfg = Config("alembic.ini")
-
     alembic_cfg.set_main_option("sqlalchemy.url", settings.test_db_url)
-
     command.upgrade(alembic_cfg, "head")
 
 
@@ -33,7 +31,7 @@ test_session_factory = async_sessionmaker(bind=test_engine, expire_on_commit=Fal
 
 
 @pytest.fixture(autouse=True)
-async def clean_database() -> AsyncGenerator[None]:
+async def clean_database():
     yield
     async with test_session_factory() as session:
         await session.execute(
@@ -43,44 +41,74 @@ async def clean_database() -> AsyncGenerator[None]:
 
 
 @pytest.fixture
-async def db_session() -> AsyncGenerator[AsyncSession]:
+async def db_session():
     async with test_session_factory() as session:
         yield session
 
 
-@pytest.fixture
-async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient]:
-    async def _override_get_db() -> AsyncGenerator[AsyncSession]:
+@pytest.fixture(autouse=True)
+async def override_get_db(db_session: AsyncSession):
+    async def _override():
         yield db_session
 
-    app.dependency_overrides[get_db] = _override_get_db
-
-    async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test",
-    ) as ac:
-        yield ac
-
+    app.dependency_overrides[get_db] = _override
+    yield
     app.dependency_overrides.clear()
 
 
 @pytest.fixture
-async def test_user(db_session: AsyncSession) -> User:
-    user = User(
-        email="test@example.com", hashed_password=hash_password("test_password123")
-    )
-    db_session.add(user)
-    await db_session.commit()
-    await db_session.refresh(user)
+def make_user(db_session: AsyncSession):
+    async def _make_user(
+        email: str = "test@example.com",
+        password: str = "test_password123",
+    ) -> User:
+        user = User(email=email, hashed_password=hash_password(password))
+        db_session.add(user)
+        await db_session.commit()
+        await db_session.refresh(user)
+        return user
 
-    return user
+    return _make_user
 
 
 @pytest.fixture
-async def authorized_client(
-    client: AsyncClient, test_user: User
-) -> AsyncGenerator[AsyncClient]:
-    token = create_access_token(test_user.id)
-    client.headers["Authorization"] = f"Bearer {token}"
+def make_client():
+    def _make_client(user: User | None = None) -> AsyncClient:
+        headers = {}
+        if user is not None:
+            headers["Authorization"] = f"Bearer {create_access_token(user.id)}"
+        return AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+            headers=headers,
+        )
 
-    yield client
+    return _make_client
+
+
+@pytest.fixture
+async def user_1(make_user) -> User:
+    return await make_user("test1@example.com")
+
+
+@pytest.fixture
+async def user_2(make_user) -> User:
+    return await make_user("test2@example.com")
+
+
+@pytest.fixture
+async def client(make_client):
+    async with make_client() as c:
+        yield c
+
+
+@pytest.fixture
+async def auth_client_1(make_client, user_1: User):
+    async with make_client(user_1) as c:
+        yield c
+
+
+@pytest.fixture
+async def auth_client_2(make_client, user_2: User):
+    async with make_client(user_2) as c:
+        yield c
