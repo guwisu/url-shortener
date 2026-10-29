@@ -1,5 +1,3 @@
-from collections.abc import AsyncGenerator, Awaitable, Callable
-
 import pytest
 from alembic import command
 from alembic.config import Config

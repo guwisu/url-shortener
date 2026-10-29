@@ -1,7 +1,10 @@
+
 from datetime import UTC, datetime, timedelta
 
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from url_shortener.models import Link
 from url_shortener.utils.code_generator import generate_short_code
 
 
@@ -123,23 +126,59 @@ async def test_deactivate_and_activate_user_link(
     assert activate_resp.status_code == 200
     assert activate_resp.json()["is_active"] is True
 
-async def test_change_someones_link(auth_client_1: AsyncClient, auth_client_2: AsyncClient) -> None:
+
+async def test_change_someones_link(
+    auth_client_1: AsyncClient, auth_client_2: AsyncClient
+) -> None:
     create_resp = await create_link(auth_client_1, url="https://example.com")
     assert create_resp.status_code == 201
 
     link_data = create_resp.json()
     link_id = link_data["id"]
     short_code = link_data["short_code"]
-    
+
     delete_resp = await auth_client_2.delete(f"/api/v1/links/{link_id}")
     assert delete_resp.status_code == 404
 
     deactivate_resp = await auth_client_2.patch(f"/api/v1/links/{link_id}/deactivate")
     assert deactivate_resp.status_code == 404
-    
+
     activate_resp = await auth_client_2.patch(f"/api/v1/links/{link_id}/activate")
     assert activate_resp.status_code == 404
 
     redirect_resp = await auth_client_2.get(f"/{short_code}")
     assert redirect_resp.status_code == 307
 
+
+async def test_redirect_expired_link(
+    db_session: AsyncSession, 
+    client: AsyncClient, 
+    user_1
+) -> None:
+    past_date = (datetime.now(UTC) - timedelta(days=1))
+    short_code = "abc123"
+    
+    link = Link(
+        original_url="https://example.com",
+        short_code=short_code,
+        user_id=user_1.id,
+        expires_at=past_date,
+        is_active=True
+    )
+    db_session.add(link)
+    await db_session.commit()
+
+    redirect_resp = await client.get(f"/{short_code}")
+    assert redirect_resp.status_code == 410
+
+
+async def test_non_authorized_client_requests(client: AsyncClient) -> None:
+    create_resp = await create_link(
+        client, url="https://example.com",
+    )
+    assert create_resp.status_code == 401
+    
+    get_resp = await client.get(
+        "/api/v1/links"
+    )
+    assert get_resp.status_code == 401
