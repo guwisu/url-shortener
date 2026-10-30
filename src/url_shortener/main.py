@@ -1,12 +1,12 @@
 import uvicorn
-from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi_offline import FastAPIOffline
 
 from url_shortener.api.routers.health import router as health_router
 from url_shortener.api.v1 import redirect_router, v1_router
 from url_shortener.core.config import settings
 
-app = FastAPI(
+app = FastAPIOffline(
     title="url-shortener",
     version="0.1.0",
 )

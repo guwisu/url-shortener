@@ -460,6 +460,18 @@ wheels = [
 ]
 
 [[package]]
+name = "fastapi-offline"
+version = "1.7.7"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "fastapi" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/15/a5/f650b565354d38f98211683a7b5c3578d450848421444799cb51da8e562f/fastapi_offline-1.7.7.tar.gz", hash = "sha256:aeeabe67dd40f867ab0fe64dd8de742949e36ba5f3ac6aeb055baef274ed91d0", size = 777678, upload-time = "2026-06-19T20:43:28.938Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8d/de/808ff88dac73c97ad32c653f92f6751ea5a0a211ae1dffd471125e63a31e/fastapi_offline-1.7.7-py3-none-any.whl", hash = "sha256:60c8399fd7d3e3b01510e14468709e3dea1a0e773ef920372d057392d736a1f9", size = 777007, upload-time = "2026-06-19T20:43:27.767Z" },
+]
+
+[[package]]
 name = "greenlet"
 version = "3.5.6"
 source = { registry = "https://pypi.org/simple" }
@@ -1218,6 +1230,7 @@ dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
     { name = "fastapi" },
+    { name = "fastapi-offline" },
     { name = "pwdlib", extra = ["argon2"] },
     { name = "pydantic", extra = ["email"] },
     { name = "pydantic-settings" },
@@ -1242,6 +1255,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.20.0" },
     { name = "asyncpg", specifier = ">=0.32.0" },
     { name = "fastapi", specifier = ">=0.143.0" },
+    { name = "fastapi-offline", specifier = ">=1.7.7" },
     { name = "pwdlib", extras = ["argon2"], specifier = ">=0.3.1" },
     { name = "pydantic", extras = ["email"], specifier = ">=2.14.1" },
     { name = "pydantic-settings", specifier = ">=2.15.0" },
