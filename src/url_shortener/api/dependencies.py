@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
+from redis.asyncio import Redis
 
 from url_shortener.core.security import decode_access_token
 from url_shortener.db.session import get_db
@@ -50,3 +51,11 @@ async def get_current_user(
     if not user:
         raise HTTPException(status_code=401)
     return user
+
+
+async def get_redis() -> Redis:
+    from url_shortener.main import redis_client
+
+    if redis_client is None:
+        raise RuntimeError("Redis is not initialized")
+    return redis_client

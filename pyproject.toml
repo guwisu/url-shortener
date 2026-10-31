@@ -19,6 +19,7 @@ dependencies = [
     "uvicorn>=0.54.0",
     "python-multipart>=0.0.32",
     "fastapi-offline>=1.7.7",
+    "redis>=8.1.0",
 ]
 
 [project.scripts]

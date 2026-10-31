@@ -16,6 +16,9 @@ class Settings(BaseSettings):
 
     CORS_ORIGINS: list[str] = ["*"]
 
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+
     @property
     def db_url(self) -> str:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
