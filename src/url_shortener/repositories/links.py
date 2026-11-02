@@ -38,7 +38,7 @@ class LinkRepository(BaseRepository[Link]):
         self,
         code: str,
         now: datetime,
-    ) -> Link | None:
+    ) -> Link:
         stmt = (
             update(self.model)
             .where(
@@ -53,7 +53,7 @@ class LinkRepository(BaseRepository[Link]):
             .returning(self.model)
         )
         result = await self.session.execute(stmt)
-        return result.scalar_one_or_none()
+        return result.scalar_one()
 
     async def get_all_by_user(self, user_id: int) -> list[Link]:
         query = (

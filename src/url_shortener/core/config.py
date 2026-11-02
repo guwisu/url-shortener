@@ -25,7 +25,9 @@ class Settings(BaseSettings):
 
     @property
     def test_db_url(self) -> str:
-        return "postgresql+asyncpg://test_user:test_pass@localhost:5434/test_url_shortener"
+        return (
+            "postgresql+asyncpg://test_user:test_pass@localhost:5434/test_url_shortener"
+        )
 
     model_config = SettingsConfigDict(
         env_file=".env",

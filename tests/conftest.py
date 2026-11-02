@@ -2,6 +2,7 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
+from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -10,6 +11,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import NullPool
 
+from url_shortener.api.dependencies import get_redis
 from url_shortener.core.config import settings
 from url_shortener.core.security import create_access_token, hash_password
 from url_shortener.db.session import get_db
@@ -51,8 +53,19 @@ async def override_get_db(db_session: AsyncSession):
 
     app.dependency_overrides[get_db] = _override
     yield
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_db, None)
 
+@pytest.fixture(autouse=True)
+async def override_get_redis():
+    redis = Redis.from_url("redis://localhost:6380", decode_responses=True)
+
+    async def _override():
+        yield redis
+
+    app.dependency_overrides[get_redis] = _override
+    yield 
+    app.dependency_overrides.pop(get_redis, None)
+    await redis.aclose()
 
 @pytest.fixture
 def make_user(db_session: AsyncSession):
