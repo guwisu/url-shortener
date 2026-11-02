@@ -22,3 +22,7 @@ class LinkResponse(LinkPublic):
     user_id: int
     created_at: datetime
     expires_at: datetime | None
+
+
+class RedirectResponse(BaseModel):
+    original_url: str

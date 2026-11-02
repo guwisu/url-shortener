@@ -11,25 +11,21 @@ from url_shortener.core.config import settings
 
 redis_client: aioredis.Redis | None = None
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global redis_client
 
     redis_client = aioredis.from_url(
-        f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}",
-        decode_responses=True
+        f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}", decode_responses=True
     )
 
     yield
 
     await redis_client.close()
-    
-    
-app = FastAPI(
-    title="url-shortener",
-    version="0.1.0",
-    lifespan=lifespan
-)
+
+
+app = FastAPI(title="url-shortener", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
