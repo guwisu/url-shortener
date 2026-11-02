@@ -1,4 +1,3 @@
-
 from datetime import UTC, datetime, timedelta
 
 from httpx import AsyncClient
@@ -151,19 +150,17 @@ async def test_change_someones_link(
 
 
 async def test_redirect_expired_link(
-    db_session: AsyncSession, 
-    client: AsyncClient, 
-    user_1
+    db_session: AsyncSession, client: AsyncClient, user_1
 ) -> None:
-    past_date = (datetime.now(UTC) - timedelta(days=1))
+    past_date = datetime.now(UTC) - timedelta(days=1)
     short_code = "abc123"
-    
+
     link = Link(
         original_url="https://example.com",
         short_code=short_code,
         user_id=user_1.id,
         expires_at=past_date,
-        is_active=True
+        is_active=True,
     )
     db_session.add(link)
     await db_session.commit()
@@ -174,11 +171,10 @@ async def test_redirect_expired_link(
 
 async def test_non_authorized_client_requests(client: AsyncClient) -> None:
     create_resp = await create_link(
-        client, url="https://example.com",
+        client,
+        url="https://example.com",
     )
     assert create_resp.status_code == 401
-    
-    get_resp = await client.get(
-        "/api/v1/links"
-    )
+
+    get_resp = await client.get("/api/v1/links")
     assert get_resp.status_code == 401

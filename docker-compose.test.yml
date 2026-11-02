@@ -1,0 +1,10 @@
+services:
+  test_db:
+    container_name: test_db
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_pass
+      POSTGRES_DB: test_url_shortener
+    ports:
+      - "5434:5432"
