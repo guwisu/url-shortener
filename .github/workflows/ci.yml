@@ -36,7 +36,7 @@ jobs:
         run: uv run mypy src
 
   tests:
-    name: Pytest with PostgreSQL
+    name: Pytest with PostgreSQL and Redis
     needs: quality
     runs-on: ubuntu-latest
 
@@ -48,9 +48,19 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:
-          - 5432:5432
+          - 5434:5432
         options: >-
           --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
@@ -61,6 +71,9 @@ jobs:
       POSTGRES_PASSWORD: postgres
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
+      
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
 
       JWT_SECRET_KEY: super-secret-test-key-at-least-32-bytes
 
