@@ -50,7 +50,7 @@ jobs:
         ports:
           - 5434:5432
         options: >-
-          --health-cmd "pg_isready -U test_user" 
+          --health-cmd "pg_isready -d test_url_shortener -U test_user" 
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
