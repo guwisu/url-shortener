@@ -33,41 +33,56 @@ class LinkService:
             status_code=503, detail="Service temporarily unavailable. Please try again."
         )
 
-    async def get_by_code(self, code: str) -> LinkResponse | None:
+    async def get_by_code(self, code: str, cache: LinkCache) -> LinkResponse | None:
         model = await self.repo.get_by_code(code)
         if model:
+            redis_clicks = await cache.get_clicks(code)
+            model.clicks_count += redis_clicks
             return LinkResponse.model_validate(model)
         return None
 
     async def redirect_by_code(self, code: str, cache: LinkCache) -> RedirectResponse:
-        link = await cache.get(code)
-        if link:
-            if not link["is_active"]:
+        cached_link = await cache.get(code)
+        if cached_link:
+            if cached_link.get("not_found") is True:
+                raise HTTPException(status_code=404, detail="Link not found")
+
+            if not cached_link["is_active"]:
                 raise HTTPException(
                     status_code=410, detail="Link has been expired or been deactivated"
                 )
             else:
-                return RedirectResponse(original_url=link["original_url"])
+                await cache.increment_clicks(code)
+                return RedirectResponse(original_url=cached_link["original_url"])
 
         model = await self.repo.get_by_code(code)
+
         if not model:
+            await cache.set(code, {"not_found": True}, 30)
             raise HTTPException(status_code=404, detail="Link not found")
+
+        now = datetime.now(UTC)
+        is_alive = model.is_active and (
+            model.expires_at is None or model.expires_at > now
+        )
+
+        if not is_alive:
+            await cache.set(model.short_code, {"is_active": False}, 60)
+            raise HTTPException(
+                status_code=410, detail="Link has been expired or been deactivated"
+            )
+
         if model.expires_at is None:
             time_to_expire = 3600
         else:
             time_left = int((model.expires_at - datetime.now(UTC)).total_seconds())
-            time_to_expire = max(0, min(time_left, 3600))
-        link_data = {"original_url": model.original_url, "is_active": model.is_active}
-        now = datetime.now(UTC)
-        if not model.is_active or (model.expires_at and model.expires_at < now):
-            raise HTTPException(
-                status_code=410, detail="Link has been expired or been deactivated"
-            )
+            time_to_expire = min(time_left, 3600)
+
+        link_data = {"original_url": model.original_url, "is_active": True}
         await cache.set(model.short_code, link_data, time_to_expire)
 
-        updated_model = await self.repo.increment_clicks_if_active(code, now=now)
-        await self.repo.commit()
-        return RedirectResponse(original_url=updated_model.original_url)
+        await cache.increment_clicks(code)
+        return RedirectResponse(original_url=model.original_url)
 
     async def get_all_by_user(self, user_id: int) -> list[LinkResponse]:
         links = await self.repo.get_all_by_user(user_id)

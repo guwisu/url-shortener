@@ -55,6 +55,7 @@ async def override_get_db(db_session: AsyncSession):
     yield
     app.dependency_overrides.pop(get_db, None)
 
+
 @pytest.fixture(autouse=True)
 async def override_get_redis():
     redis = Redis.from_url("redis://localhost:6380", decode_responses=True)
@@ -63,9 +64,10 @@ async def override_get_redis():
         yield redis
 
     app.dependency_overrides[get_redis] = _override
-    yield 
+    yield
     app.dependency_overrides.pop(get_redis, None)
     await redis.aclose()
+
 
 @pytest.fixture
 def make_user(db_session: AsyncSession):

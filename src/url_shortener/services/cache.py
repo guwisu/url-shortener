@@ -22,3 +22,12 @@ class LinkCache:
 
     async def delete(self, code: str):
         await self.redis.delete(f"{self.prefix}{code}")
+
+    async def increment_clicks(self, code: str):
+        await self.redis.incr(f"clicks:{code}")
+
+    async def get_clicks(self, code: str):
+        clicks = await self.redis.get(f"clicks:{code}")
+        if clicks:
+            return int(clicks)
+        return 0
