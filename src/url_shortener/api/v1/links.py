@@ -2,13 +2,14 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
-from redis.asyncio import Redis
 
-from url_shortener.api.dependencies import get_current_user, get_link_service, get_redis
+from url_shortener.api.dependencies import (
+    get_current_user,
+    get_link_service,
+)
 from url_shortener.models import User
 from url_shortener.schemas.links import LinkCreate, LinkPublic, LinkResponse
 from url_shortener.services import LinkService
-from url_shortener.services.cache import LinkCache
 
 router = APIRouter(prefix="/links", tags=["links"])
 
@@ -28,10 +29,8 @@ async def create_link(
 async def get_by_code(
     code: str,
     service: Annotated[LinkService, Depends(get_link_service)],
-    redis: Annotated[Redis, Depends(get_redis)],
 ):
-    cache = LinkCache(redis)
-    link = await service.get_by_code(code, cache)
+    link = await service.get_by_code(code)
     if not link:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Link not found"
@@ -42,11 +41,9 @@ async def get_by_code(
 @redirect_router.get("/{code}")
 async def redirect_by_code(
     code: str,
-    redis: Annotated[Redis, Depends(get_redis)],
     service: Annotated[LinkService, Depends(get_link_service)],
 ):
-    cache = LinkCache(redis)
-    link = await service.redirect_by_code(code, cache)
+    link = await service.redirect_by_code(code)
     return RedirectResponse(
         url=link.original_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT
     )
@@ -64,30 +61,24 @@ async def get_all_by_user(
 async def delete_user_link(
     link_id: int,
     current_user: Annotated[User, Depends(get_current_user)],
-    redis: Annotated[Redis, Depends(get_redis)],
     service: Annotated[LinkService, Depends(get_link_service)],
 ) -> LinkResponse:
-    cache = LinkCache(redis)
-    return await service.delete_user_link(current_user.id, link_id, cache)
+    return await service.delete_user_link(current_user.id, link_id)
 
 
 @router.patch("/{link_id}/deactivate", response_model=LinkResponse)
 async def deactivate_user_link(
     link_id: int,
     current_user: Annotated[User, Depends(get_current_user)],
-    redis: Annotated[Redis, Depends(get_redis)],
     service: Annotated[LinkService, Depends(get_link_service)],
 ) -> LinkResponse:
-    cache = LinkCache(redis)
-    return await service.deactivate_user_link(current_user.id, link_id, cache)
+    return await service.deactivate_user_link(current_user.id, link_id)
 
 
 @router.patch("/{link_id}/activate", response_model=LinkResponse)
 async def activate_user_link(
     link_id: int,
     current_user: Annotated[User, Depends(get_current_user)],
-    redis: Annotated[Redis, Depends(get_redis)],
     service: Annotated[LinkService, Depends(get_link_service)],
 ) -> LinkResponse:
-    cache = LinkCache(redis)
-    return await service.activate_user_link(current_user.id, link_id, cache)
+    return await service.activate_user_link(current_user.id, link_id)

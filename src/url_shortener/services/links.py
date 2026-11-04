@@ -11,8 +11,9 @@ from url_shortener.utils.code_generator import generate_short_code
 
 
 class LinkService:
-    def __init__(self, repository: LinkRepository):
+    def __init__(self, repository: LinkRepository, cache: LinkCache):
         self.repo = repository
+        self.cache = cache
 
     async def create_link(
         self, user_id: int, original_url: str, expires_at: datetime | None
@@ -33,16 +34,17 @@ class LinkService:
             status_code=503, detail="Service temporarily unavailable. Please try again."
         )
 
-    async def get_by_code(self, code: str, cache: LinkCache) -> LinkResponse | None:
+    async def get_by_code(self, code: str) -> LinkResponse | None:
         model = await self.repo.get_by_code(code)
         if model:
-            redis_clicks = await cache.get_clicks(code)
-            model.clicks_count += redis_clicks
-            return LinkResponse.model_validate(model)
+            response = LinkResponse.model_validate(model)
+            redis_clicks = await self.cache.get_clicks(code)
+            response.clicks_count += redis_clicks
+            return response
         return None
 
-    async def redirect_by_code(self, code: str, cache: LinkCache) -> RedirectResponse:
-        cached_link = await cache.get(code)
+    async def redirect_by_code(self, code: str) -> RedirectResponse:
+        cached_link = await self.cache.get(code)
         if cached_link:
             if cached_link.get("not_found") is True:
                 raise HTTPException(status_code=404, detail="Link not found")
@@ -52,13 +54,13 @@ class LinkService:
                     status_code=410, detail="Link has been expired or been deactivated"
                 )
             else:
-                await cache.increment_clicks(code)
+                await self.cache.increment_clicks(code)
                 return RedirectResponse(original_url=cached_link["original_url"])
 
         model = await self.repo.get_by_code(code)
 
         if not model:
-            await cache.set(code, {"not_found": True}, 30)
+            await self.cache.set(code, {"not_found": True}, 30)
             raise HTTPException(status_code=404, detail="Link not found")
 
         now = datetime.now(UTC)
@@ -67,7 +69,7 @@ class LinkService:
         )
 
         if not is_alive:
-            await cache.set(model.short_code, {"is_active": False}, 60)
+            await self.cache.set(model.short_code, {"is_active": False}, 60)
             raise HTTPException(
                 status_code=410, detail="Link has been expired or been deactivated"
             )
@@ -79,47 +81,41 @@ class LinkService:
             time_to_expire = max(1, min(time_left, 3600))
 
         link_data = {"original_url": model.original_url, "is_active": True}
-        await cache.set(model.short_code, link_data, time_to_expire)
+        await self.cache.set(model.short_code, link_data, time_to_expire)
 
-        await cache.increment_clicks(code)
+        await self.cache.increment_clicks(code)
         return RedirectResponse(original_url=model.original_url)
 
     async def get_all_by_user(self, user_id: int) -> list[LinkResponse]:
         links = await self.repo.get_all_by_user(user_id)
         return list(map(LinkResponse.model_validate, links))
 
-    async def delete_user_link(
-        self, user_id: int, link_id: int, cache: LinkCache
-    ) -> LinkResponse:
+    async def delete_user_link(self, user_id: int, link_id: int) -> LinkResponse:
         result = await self.repo.delete_user_link(user_id, link_id)
         if result is None:
             raise HTTPException(status_code=404, detail="Link not found")
         await self.repo.commit()
 
-        await cache.delete(result.short_code)
+        await self.cache.delete(result.short_code)
 
         return LinkResponse.model_validate(result)
 
-    async def deactivate_user_link(
-        self, user_id: int, link_id: int, cache: LinkCache
-    ) -> LinkResponse:
+    async def deactivate_user_link(self, user_id: int, link_id: int) -> LinkResponse:
         result = await self.repo.deactivate_user_link(user_id, link_id)
         if result is None:
             raise HTTPException(status_code=404, detail="Link not found")
         await self.repo.commit()
 
-        await cache.delete(result.short_code)
+        await self.cache.delete(result.short_code)
 
         return LinkResponse.model_validate(result)
 
-    async def activate_user_link(
-        self, user_id: int, link_id: int, cache: LinkCache
-    ) -> LinkResponse:
+    async def activate_user_link(self, user_id: int, link_id: int) -> LinkResponse:
         result = await self.repo.activate_user_link(user_id, link_id)
         if result is None:
             raise HTTPException(status_code=404, detail="Link not found")
         await self.repo.commit()
 
-        await cache.delete(result.short_code)
+        await self.cache.delete(result.short_code)
 
         return LinkResponse.model_validate(result)

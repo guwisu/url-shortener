@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, ForeignKey, Integer, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from url_shortener.models import Base
+from url_shortener.models.base import Base
 
 
 class Link(Base):

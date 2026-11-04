@@ -1,7 +1,7 @@
 from sqlalchemy import insert, select
 
 from url_shortener.models import User
-from url_shortener.repositories import BaseRepository
+from url_shortener.repositories.base import BaseRepository
 
 
 class UserRepository(BaseRepository[User]):

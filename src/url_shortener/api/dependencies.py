@@ -11,6 +11,7 @@ from url_shortener.models import User
 from url_shortener.repositories import LinkRepository
 from url_shortener.repositories.users import UserRepository
 from url_shortener.services import AuthService, LinkService
+from url_shortener.services.cache import LinkCache
 
 
 def get_link_repository(
@@ -19,10 +20,19 @@ def get_link_repository(
     return LinkRepository(session)
 
 
+async def get_redis(request: Request) -> Redis:
+    return request.app.state.redis
+
+
+def get_link_cache(redis: Annotated[Redis, Depends(get_redis)]) -> LinkCache:
+    return LinkCache(redis)
+
+
 def get_link_service(
     repository: Annotated[LinkRepository, Depends(get_link_repository)],
+    cache: Annotated[LinkCache, Depends(get_link_cache)],
 ) -> LinkService:
-    return LinkService(repository)
+    return LinkService(repository, cache)
 
 
 def get_user_repository(
@@ -51,7 +61,3 @@ async def get_current_user(
     if not user:
         raise HTTPException(status_code=401)
     return user
-
-
-async def get_redis(request: Request) -> Redis:
-    return request.app.state.redis
