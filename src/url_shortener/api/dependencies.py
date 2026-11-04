@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,9 +53,5 @@ async def get_current_user(
     return user
 
 
-async def get_redis() -> Redis:
-    from url_shortener.main import redis_client
-
-    if redis_client is None:
-        raise RuntimeError("Redis is not initialized")
-    return redis_client
+async def get_redis(request: Request) -> Redis:
+    return request.app.state.redis

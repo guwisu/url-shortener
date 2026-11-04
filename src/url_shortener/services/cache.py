@@ -1,6 +1,10 @@
 import json
+import logging
 
 from redis.asyncio import Redis
+from redis.exceptions import RedisError
+
+log = logging.getLogger(__name__)
 
 
 class LinkCache:
@@ -9,25 +13,42 @@ class LinkCache:
         self.prefix = "link:"
 
     async def get(self, code: str) -> dict | None:
-        link = await self.redis.get(f"{self.prefix}{code}")
-        if not link:
+        try:
+            link = await self.redis.get(f"{self.prefix}{code}")
+            if not link:
+                return None
+            data = json.loads(link)
+            return dict(data)
+        except RedisError as e:
+            log.error(f"Redis error: {e}")
             return None
-        data = json.loads(link)
-        return dict(data)
 
     async def set(self, code: str, data: dict, ttl: int):
-        json_data = json.dumps(data)
+        try:
+            json_data = json.dumps(data)
 
-        await self.redis.set(f"{self.prefix}{code}", json_data, ex=ttl)
+            await self.redis.set(f"{self.prefix}{code}", json_data, ex=ttl)
+        except RedisError as e:
+            log.error(f"Redis error: {e}")
 
     async def delete(self, code: str):
-        await self.redis.delete(f"{self.prefix}{code}")
+        try:
+            await self.redis.delete(f"{self.prefix}{code}")
+        except RedisError as e:
+            log.error(f"Redis error: {e}")
 
     async def increment_clicks(self, code: str):
-        await self.redis.incr(f"clicks:{code}")
+        try:
+            await self.redis.incr(f"clicks:{code}")
+        except RedisError as e:
+            log.error(f"Redis error: {e}")
 
     async def get_clicks(self, code: str):
-        clicks = await self.redis.get(f"clicks:{code}")
-        if clicks:
-            return int(clicks)
-        return 0
+        try:
+            clicks = await self.redis.get(f"clicks:{code}")
+            if clicks:
+                return int(clicks)
+            return 0
+        except RedisError as e:
+            log.error(f"Redis error: {e}")
+            return 0

@@ -9,20 +9,15 @@ from url_shortener.api.routers.health import router as health_router
 from url_shortener.api.v1 import redirect_router, v1_router
 from url_shortener.core.config import settings
 
-redis_client: aioredis.Redis | None = None
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global redis_client
-
-    redis_client = aioredis.from_url(
+    redis_client = aioredis.Redis.from_url(
         f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}", decode_responses=True
     )
-
+    app.state.redis = redis_client
     yield
-
-    await redis_client.close()
+    await redis_client.aclose()
 
 
 app = FastAPI(title="url-shortener", version="0.1.0", lifespan=lifespan)

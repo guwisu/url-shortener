@@ -76,7 +76,7 @@ class LinkService:
             time_to_expire = 3600
         else:
             time_left = int((model.expires_at - datetime.now(UTC)).total_seconds())
-            time_to_expire = min(time_left, 3600)
+            time_to_expire = max(1, min(time_left, 3600))
 
         link_data = {"original_url": model.original_url, "is_active": True}
         await cache.set(model.short_code, link_data, time_to_expire)
