@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import delete, insert, or_, select, update
+from sqlalchemy import delete, insert, select, update
 
 from url_shortener.models import Link
 from url_shortener.repositories.base import BaseRepository
@@ -29,31 +29,18 @@ class LinkRepository(BaseRepository[Link]):
         result = await self.session.execute(stmt)
         return result.scalar_one()
 
-    async def get_by_code(self, code: str) -> Link | None:
-        query = select(self.model).where(self.model.short_code == code)
+    async def get_by_code(self, user_id: int, code: str) -> Link | None:
+        query = select(self.model).where(
+            self.model.short_code == code,
+            self.model.user_id == user_id,
+        )
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
-    async def increment_clicks_if_active(
-        self,
-        code: str,
-        now: datetime,
-    ) -> Link:
-        stmt = (
-            update(self.model)
-            .where(
-                self.model.short_code == code,
-                self.model.is_active.is_(True),
-                or_(
-                    self.model.expires_at.is_(None),
-                    self.model.expires_at > now,
-                ),
-            )
-            .values(clicks_count=self.model.clicks_count + 1)
-            .returning(self.model)
-        )
-        result = await self.session.execute(stmt)
-        return result.scalar_one()
+    async def redirect_by_code(self, code: str) -> Link | None:
+        query = select(self.model).where(self.model.short_code == code)
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
 
     async def get_all_by_user(self, user_id: int) -> list[Link]:
         query = (

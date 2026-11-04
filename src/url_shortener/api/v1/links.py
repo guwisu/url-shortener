@@ -28,9 +28,10 @@ async def create_link(
 @router.get("/{code}", response_model=LinkPublic)
 async def get_by_code(
     code: str,
+    current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[LinkService, Depends(get_link_service)],
 ):
-    link = await service.get_by_code(code)
+    link = await service.get_by_code(current_user.id, code)
     if not link:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Link not found"

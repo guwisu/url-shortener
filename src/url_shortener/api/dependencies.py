@@ -56,7 +56,11 @@ async def get_current_user(
 ) -> User:
     decoded_token = decode_access_token(token.credentials)
     if decoded_token is None:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     user = await repo.get_by_id(decoded_token)
     if not user:
         raise HTTPException(status_code=401)
