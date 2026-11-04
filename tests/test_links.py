@@ -1,6 +1,8 @@
+import json
 from datetime import UTC, datetime, timedelta
 
 from httpx import AsyncClient
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from url_shortener.models import Link
@@ -64,8 +66,8 @@ async def test_redirect_increments_clicks(auth_client_1: AsyncClient) -> None:
     assert info_resp.json()["clicks_count"] == 1
 
 
-async def test_not_found_link(client: AsyncClient) -> None:
-    resp_info = await client.get("/api/v1/links/nonexistent")
+async def test_not_found_link(client: AsyncClient, auth_client_1: AsyncClient) -> None:
+    resp_info = await auth_client_1.get("/api/v1/links/nonexistent")
     assert resp_info.status_code == 404
 
     resp_redirect = await client.get("/nonexistent")
@@ -178,3 +180,37 @@ async def test_non_authorized_client_requests(client: AsyncClient) -> None:
 
     get_resp = await client.get("/api/v1/links")
     assert get_resp.status_code == 401
+
+
+async def test_redirect_uses_cache(client: AsyncClient, redis_client: Redis):
+
+    short_code = "fake123"
+    cache_key = f"link:{short_code}"
+    fake_data = {
+        "original_url": "https://cache-hit.com",
+        "is_active": True,
+    }
+
+    await redis_client.set(cache_key, json.dumps(fake_data), ex=3600)
+
+    redirect_resp = await client.get(f"/{short_code}")
+
+    assert redirect_resp.status_code == 307
+    assert redirect_resp.headers["location"] == "https://cache-hit.com"
+
+    clicks = await redis_client.get(f"clicks:{short_code}")
+    assert clicks is not None
+    assert int(clicks) == 1
+
+
+async def test_redirect_deactivated_in_cache(client: AsyncClient, redis_client: Redis):
+    short_code = "dead123"
+
+    await redis_client.set(
+        f"link:{short_code}",
+        json.dumps({"original_url": "https://example.com", "is_active": False}),
+        ex=3600,
+    )
+
+    redirect_resp = await client.get(f"/{short_code}")
+    assert redirect_resp.status_code == 410

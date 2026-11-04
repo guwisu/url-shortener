@@ -1,3 +1,5 @@
+from collections.abc import AsyncGenerator
+
 import pytest
 from alembic import command
 from alembic.config import Config
@@ -40,10 +42,26 @@ async def clean_database():
         await session.commit()
 
 
+@pytest.fixture(autouse=True)
+async def clean_redis():
+    redis = Redis.from_url("redis://localhost:6380", decode_responses=True)
+    await redis.flushdb()
+    await redis.aclose()
+
+
 @pytest.fixture
 async def db_session():
     async with test_session_factory() as session:
         yield session
+
+
+@pytest.fixture
+async def redis_client() -> AsyncGenerator[Redis]:
+    redis = Redis.from_url("redis://localhost:6380", decode_responses=True)
+
+    await redis.flushdb()
+    yield redis
+    await redis.aclose()
 
 
 @pytest.fixture(autouse=True)
@@ -57,16 +75,13 @@ async def override_get_db(db_session: AsyncSession):
 
 
 @pytest.fixture(autouse=True)
-async def override_get_redis():
-    redis = Redis.from_url("redis://localhost:6380", decode_responses=True)
-
+async def override_get_redis(redis_client: Redis):
     async def _override():
-        yield redis
+        yield redis_client
 
     app.dependency_overrides[get_redis] = _override
     yield
     app.dependency_overrides.pop(get_redis, None)
-    await redis.aclose()
 
 
 @pytest.fixture
