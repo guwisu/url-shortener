@@ -1,8 +1,8 @@
 import asyncio
 
-from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 
+from url_shortener.core.exceptions import InvalidCredentials, UserAlreadyExists
 from url_shortener.core.security import (
     create_access_token,
     hash_password,
@@ -20,7 +20,7 @@ class AuthService:
         lower_email = email.lower()
         test_user = await self.repo.get_by_email(lower_email)
         if test_user:
-            raise HTTPException(status_code=400, detail="Email already registered")
+            raise UserAlreadyExists
         hashed_password = await asyncio.to_thread(hash_password, password)
         try:
             user = await self.repo.add(lower_email, hashed_password)
@@ -28,14 +28,14 @@ class AuthService:
             return UserResponse.model_validate(user)
         except IntegrityError:
             await self.repo.rollback()
-            raise HTTPException(status_code=400, detail="Email already registered")
+            raise UserAlreadyExists
 
     async def login(self, email: str, password: str) -> TokenResponse:
         user = await self.repo.get_by_email(email.lower())
         if user is None:
-            raise HTTPException(status_code=401, detail="Invalid credentials")
+            raise InvalidCredentials
         if not await asyncio.to_thread(verify_password, password, user.hashed_password):
-            raise HTTPException(status_code=401, detail="Invalid credentials")
+            raise InvalidCredentials
 
         token = create_access_token(user.id)
         return TokenResponse(access_token=token)
