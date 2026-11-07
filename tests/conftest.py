@@ -15,6 +15,7 @@ from sqlalchemy.pool import NullPool
 
 from url_shortener.api.dependencies import get_redis
 from url_shortener.core.config import settings
+from url_shortener.core.rate_limit import limiter
 from url_shortener.core.security import create_access_token, hash_password
 from url_shortener.db.session import get_db
 from url_shortener.main import app
@@ -30,6 +31,13 @@ def run_migrations_for_tests() -> None:
 
 test_engine = create_async_engine(settings.test_db_url, echo=False, poolclass=NullPool)
 test_session_factory = async_sessionmaker(bind=test_engine, expire_on_commit=False)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def disable_rate_limiter():
+    limiter.enabled = False
+    yield
+    limiter.enabled = True
 
 
 @pytest.fixture(autouse=True)

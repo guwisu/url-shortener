@@ -1,12 +1,13 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 
 from url_shortener.api.dependencies import (
     get_current_user,
     get_link_service,
 )
+from url_shortener.core.rate_limit import limiter
 from url_shortener.models import User
 from url_shortener.schemas.links import LinkCreate, LinkPublic, LinkResponse
 from url_shortener.services import LinkService
@@ -17,7 +18,9 @@ redirect_router = APIRouter(tags=["links"])
 
 
 @router.post("", response_model=LinkResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("20/minute")
 async def create_link(
+    request: Request,
     body: LinkCreate,
     current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[LinkService, Depends(get_link_service)],

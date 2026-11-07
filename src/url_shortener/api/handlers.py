@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from url_shortener.core.exceptions import (
     InvalidCredentials,
@@ -41,3 +43,4 @@ def setup_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(UserAlreadyExists, user_already_exists_handler)
     app.add_exception_handler(InvalidCredentials, invalid_credentials_handler)
     app.add_exception_handler(ServiceUnavailable, service_unavailable_handler)
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
