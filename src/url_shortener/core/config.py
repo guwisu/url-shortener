@@ -21,6 +21,8 @@ class Settings(BaseSettings):
         {"api", "docs", "health", "redoc", "metrics"}
     )
 
+    RATE_LIMIT_ENABLED: bool = True
+
     @property
     def db_url(self) -> str:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"

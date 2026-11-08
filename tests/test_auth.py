@@ -47,3 +47,31 @@ async def test_login_wrong_password(client: AsyncClient):
         client, email="new@example.com", password="wrong_password"
     )
     assert login_wrong_password_response.status_code == 401
+
+
+async def test_login_rate_limit(client: AsyncClient, enabled_limiter):
+    payload = {"email": "nobody@example.com", "password": "whatever123"}
+
+    for _ in range(5):
+        resp = await login_user(
+            client, email=payload["email"], password=payload["password"]
+        )
+        assert resp.status_code == 401
+
+    resp = await client.post("/api/v1/auth/login", json=payload)
+    assert resp.status_code == 429
+
+
+async def test_register_rate_limit(client: AsyncClient, enabled_limiter):
+    for i in range(5):
+        resp = await client.post(
+            "/api/v1/auth/register",
+            json={"email": f"user{i}@example.com", "password": "test_password123"},
+        )
+        assert resp.status_code == 201
+
+    resp = await client.post(
+        "/api/v1/auth/register",
+        json={"email": "user6@example.com", "password": "test_password123"},
+    )
+    assert resp.status_code == 429

@@ -237,6 +237,15 @@ async def test_redirect_deactivated_in_cache(client: AsyncClient, redis_client: 
         "http://[::1]/",
     ],
 )
-async def test_create_link_private_url_fails(auth_client_1, url):
+async def test_create_link_private_url_fails(auth_client_1: AsyncClient, url: str):
     created_resp = await create_link(auth_client_1, url)
     assert created_resp.status_code == 422
+
+
+async def test_link_rate_limit(auth_client_1, enabled_limiter):
+    for _ in range(20):
+        created_resp = await create_link(auth_client_1, "https://example.com")
+        assert created_resp.status_code == 201
+
+    created_resp = await create_link(auth_client_1, "https://example.com")
+    assert created_resp.status_code == 429

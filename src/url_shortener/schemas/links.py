@@ -41,7 +41,6 @@ class LinkPublic(BaseModel):
 
 class LinkResponse(LinkPublic):
     id: int
-    user_id: int
     created_at: datetime
     expires_at: datetime | None
 

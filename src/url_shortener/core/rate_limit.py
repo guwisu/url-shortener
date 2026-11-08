@@ -3,4 +3,8 @@ from slowapi.util import get_remote_address
 
 from url_shortener.core.config import settings
 
-limiter = Limiter(key_func=get_remote_address, storage_uri=settings.redis_url)
+limiter = Limiter(
+    key_func=get_remote_address,
+    storage_uri=settings.redis_url,
+    enabled=settings.RATE_LIMIT_ENABLED,
+)

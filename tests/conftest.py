@@ -4,6 +4,8 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
+from limits.storage import MemoryStorage
+from limits.strategies import FixedWindowRateLimiter
 from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
@@ -38,6 +40,23 @@ def disable_rate_limiter():
     limiter.enabled = False
     yield
     limiter.enabled = True
+
+
+@pytest.fixture
+def enabled_limiter():
+    old_enabled = limiter.enabled
+    old_storage = limiter._storage
+    old_strategy = limiter._limiter
+
+    limiter._storage = MemoryStorage()
+    limiter._limiter = FixedWindowRateLimiter(limiter._storage)
+    limiter.enabled = True
+
+    yield limiter
+
+    limiter.enabled = old_enabled
+    limiter._storage = old_storage
+    limiter._limiter = old_strategy
 
 
 @pytest.fixture(autouse=True)
