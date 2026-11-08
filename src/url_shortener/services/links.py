@@ -12,7 +12,7 @@ from url_shortener.schemas import LinkResponse
 from url_shortener.schemas.links import RedirectResponse
 from url_shortener.services import LinkCache
 from url_shortener.utils.code_generator import generate_short_code
-
+from url_shortener.core.config import settings
 
 class LinkService:
     def __init__(self, repository: LinkRepository, cache: LinkCache):
@@ -24,6 +24,8 @@ class LinkService:
     ) -> LinkResponse:
         for _ in range(5):
             short_code = generate_short_code()
+            if short_code in settings.SYSTEM_WORDS:
+                continue
             try:
                 model = await self.repo.add(
                     user_id, original_url, short_code, expires_at
