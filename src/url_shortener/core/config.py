@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     REDIS_PORT: int = 6379
 
     SYSTEM_WORDS: set = {"api", "docs", "health", "redoc", "metrics", "openapi.json"}
-    
+
     @property
     def db_url(self) -> str:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"

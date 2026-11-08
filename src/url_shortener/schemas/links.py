@@ -1,7 +1,14 @@
 import ipaddress
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, FutureDatetime, HttpUrl, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    FutureDatetime,
+    HttpUrl,
+    field_validator,
+)
 
 
 class LinkCreate(BaseModel):
@@ -17,16 +24,16 @@ class LinkCreate(BaseModel):
 
         if host == "localhost":
             raise ValueError("Private and local URLs are not allowed")
-            
+
         try:
             ip = ipaddress.ip_address(host)
             if ip.is_private:
                 raise ValueError("Private IP addresses are not allowed")
         except ValueError:
             pass
-            
+
         return url
-            
+
 
 class LinkPublic(BaseModel):
     original_url: str

@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy.exc import IntegrityError
 
+from url_shortener.core.config import settings
 from url_shortener.core.exceptions import (
     LinkDeactivated,
     LinkNotFound,
@@ -12,7 +13,7 @@ from url_shortener.schemas import LinkResponse
 from url_shortener.schemas.links import RedirectResponse
 from url_shortener.services import LinkCache
 from url_shortener.utils.code_generator import generate_short_code
-from url_shortener.core.config import settings
+
 
 class LinkService:
     def __init__(self, repository: LinkRepository, cache: LinkCache):
