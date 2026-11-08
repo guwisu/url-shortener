@@ -42,11 +42,13 @@ class LinkRepository(BaseRepository[Link]):
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_all_by_user(self, user_id: int) -> list[Link]:
+    async def get_all_by_user(self, user_id: int, skip: int, limit: int = 100) -> list[Link]:
         query = (
             select(self.model)
             .where(self.model.user_id == user_id)
             .order_by(self.model.id.desc())
+            .offset(skip)
+            .limit(limit)
         )
         models = await self.session.execute(query)
         return list(models.scalars().all())

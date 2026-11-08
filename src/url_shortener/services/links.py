@@ -87,8 +87,8 @@ class LinkService:
         await self.cache.increment_clicks(code)
         return RedirectResponse(original_url=model.original_url)
 
-    async def get_all_by_user(self, user_id: int) -> list[LinkResponse]:
-        links = await self.repo.get_all_by_user(user_id)
+    async def get_all_by_user(self, user_id: int, skip: int, limit: int) -> list[LinkResponse]:
+        links = await self.repo.get_all_by_user(user_id, skip, limit)
         return list(map(LinkResponse.model_validate, links))
 
     async def delete_user_link(self, user_id: int, link_id: int) -> LinkResponse:

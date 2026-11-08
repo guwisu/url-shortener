@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import RedirectResponse
 
 from url_shortener.api.dependencies import (
@@ -57,8 +57,10 @@ async def redirect_by_code(
 async def get_all_by_user(
     current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[LinkService, Depends(get_link_service)],
+    skip: int = Query(0, ge=0, description="How much to skip"),
+    limit: int = Query(20, ge=1, le=100, description="How much to return (max 100)")
 ) -> list[LinkResponse]:
-    return await service.get_all_by_user(current_user.id)
+    return await service.get_all_by_user(current_user.id, skip, limit)
 
 
 @router.delete("/{link_id}", response_model=LinkResponse)

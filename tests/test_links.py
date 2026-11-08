@@ -87,6 +87,15 @@ async def test_get_all_by_user(auth_client_1: AsyncClient) -> None:
     assert get_data[0]["original_url"] == "https://example.com/2"
     assert get_data[1]["original_url"] == "https://example.com/1"
 
+    get_paginated_resp = await auth_client_1.get("/api/v1/links?skip=1&limit=1")
+    assert get_paginated_resp.status_code == 200
+
+    paginated_data= get_paginated_resp.json()
+
+    assert len(paginated_data) == 1
+
+    assert paginated_data[0]["original_url"] == "https://example.com/1"
+
 
 async def test_delete_user_link(auth_client_1: AsyncClient) -> None:
     create_resp = await create_link(auth_client_1, url="https://example.com")
