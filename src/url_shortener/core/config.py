@@ -17,7 +17,9 @@ class Settings(BaseSettings):
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
 
-    SYSTEM_WORDS: set = {"api", "docs", "health", "redoc", "metrics", "openapi.json"}
+    SYSTEM_WORDS: frozenset[str] = frozenset(
+        {"api", "docs", "health", "redoc", "metrics"}
+    )
 
     @property
     def db_url(self) -> str:

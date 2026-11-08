@@ -18,20 +18,15 @@ class LinkCreate(BaseModel):
     @field_validator("url")
     @classmethod
     def validate_url(cls, url: HttpUrl):
-        host = url.host
-        if not host:
-            return url
-
-        if host == "localhost":
+        host = (url.host or "").lower().rstrip(".")
+        if host == "localhost" or host.endswith(".localhost"):
             raise ValueError("Private and local URLs are not allowed")
-
         try:
-            ip = ipaddress.ip_address(host)
-            if ip.is_private:
-                raise ValueError("Private IP addresses are not allowed")
+            ip = ipaddress.ip_address(host.strip("[]"))
         except ValueError:
-            pass
-
+            return url
+        if not ip.is_global:
+            raise ValueError("Non-public IP addresses are not allowed")
         return url
 
 

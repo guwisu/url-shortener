@@ -58,7 +58,7 @@ async def get_all_by_user(
     current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[LinkService, Depends(get_link_service)],
     skip: int = Query(0, ge=0, description="How much to skip"),
-    limit: int = Query(20, ge=1, le=100, description="How much to return (max 100)")
+    limit: int = Query(20, ge=1, le=100, description="How much to return (max 100)"),
 ) -> list[LinkResponse]:
     return await service.get_all_by_user(current_user.id, skip, limit)
 
@@ -78,7 +78,7 @@ async def deactivate_user_link(
     current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[LinkService, Depends(get_link_service)],
 ) -> LinkResponse:
-    return await service.deactivate_user_link(current_user.id, link_id)
+    return await service.set_active(current_user.id, link_id, value=False)
 
 
 @router.patch("/{link_id}/activate", response_model=LinkResponse)
@@ -87,4 +87,4 @@ async def activate_user_link(
     current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[LinkService, Depends(get_link_service)],
 ) -> LinkResponse:
-    return await service.activate_user_link(current_user.id, link_id)
+    return await service.set_active(current_user.id, link_id, value=True)

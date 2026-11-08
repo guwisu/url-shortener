@@ -87,7 +87,9 @@ class LinkService:
         await self.cache.increment_clicks(code)
         return RedirectResponse(original_url=model.original_url)
 
-    async def get_all_by_user(self, user_id: int, skip: int, limit: int) -> list[LinkResponse]:
+    async def get_all_by_user(
+        self, user_id: int, skip: int, limit: int
+    ) -> list[LinkResponse]:
         links = await self.repo.get_all_by_user(user_id, skip, limit)
         return list(map(LinkResponse.model_validate, links))
 
@@ -101,18 +103,8 @@ class LinkService:
 
         return LinkResponse.model_validate(result)
 
-    async def deactivate_user_link(self, user_id: int, link_id: int) -> LinkResponse:
-        result = await self.repo.deactivate_user_link(user_id, link_id)
-        if result is None:
-            raise LinkNotFound
-        await self.repo.commit()
-
-        await self.cache.delete(result.short_code)
-
-        return LinkResponse.model_validate(result)
-
-    async def activate_user_link(self, user_id: int, link_id: int) -> LinkResponse:
-        result = await self.repo.activate_user_link(user_id, link_id)
+    async def set_active(self, user_id: int, link_id: int, value: bool) -> LinkResponse:
+        result = await self.repo.set_active(user_id, link_id, value)
         if result is None:
             raise LinkNotFound
         await self.repo.commit()

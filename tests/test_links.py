@@ -1,6 +1,7 @@
 import json
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from httpx import AsyncClient
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -90,7 +91,7 @@ async def test_get_all_by_user(auth_client_1: AsyncClient) -> None:
     get_paginated_resp = await auth_client_1.get("/api/v1/links?skip=1&limit=1")
     assert get_paginated_resp.status_code == 200
 
-    paginated_data= get_paginated_resp.json()
+    paginated_data = get_paginated_resp.json()
 
     assert len(paginated_data) == 1
 
@@ -223,3 +224,19 @@ async def test_redirect_deactivated_in_cache(client: AsyncClient, redis_client: 
 
     redirect_resp = await client.get(f"/{short_code}")
     assert redirect_resp.status_code == 410
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://localhost/x",
+        "http://127.0.0.1",
+        "http://192.168.1.1",
+        "http://10.0.0.5",
+        "http://169.254.169.254",
+        "http://[::1]/",
+    ],
+)
+async def test_create_link_private_url_fails(auth_client_1, url):
+    created_resp = await create_link(auth_client_1, url)
+    assert created_resp.status_code == 422

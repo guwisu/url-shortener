@@ -42,7 +42,9 @@ class LinkRepository(BaseRepository[Link]):
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_all_by_user(self, user_id: int, skip: int, limit: int = 100) -> list[Link]:
+    async def get_all_by_user(
+        self, user_id: int, skip: int, limit: int = 100
+    ) -> list[Link]:
         query = (
             select(self.model)
             .where(self.model.user_id == user_id)
@@ -62,23 +64,11 @@ class LinkRepository(BaseRepository[Link]):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def deactivate_user_link(self, user_id: int, link_id: int) -> Link | None:
+    async def set_active(self, user_id: int, link_id: int, value: bool) -> Link | None:
         stmt = (
             update(self.model)
             .values(
-                is_active=False,
-            )
-            .where(self.model.user_id == user_id, self.model.id == link_id)
-            .returning(self.model)
-        )
-        result = await self.session.execute(stmt)
-        return result.scalar_one_or_none()
-
-    async def activate_user_link(self, user_id: int, link_id: int) -> Link | None:
-        stmt = (
-            update(self.model)
-            .values(
-                is_active=True,
+                is_active=value,
             )
             .where(self.model.user_id == user_id, self.model.id == link_id)
             .returning(self.model)
