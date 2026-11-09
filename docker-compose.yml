@@ -57,6 +57,23 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+  worker:
+    build: .
+    container_name: url-shortener-worker
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    command: ["python", "-m", "url_shortener.tasks.worker"]
+    restart: unless-stopped
+      
   redis:
     image: redis:7-alpine
     container_name: redis

@@ -1,4 +1,3 @@
-import asyncio
 import contextlib
 
 import uvicorn
@@ -11,18 +10,13 @@ from url_shortener.api.routers.health import router as health_router
 from url_shortener.api.v1 import redirect_router, v1_router
 from url_shortener.core.config import settings
 from url_shortener.core.rate_limit import limiter
-from url_shortener.tasks.worker import click_sync_worker
 
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
     redis_client = Redis.from_url(url=settings.redis_url, decode_responses=True)
     app.state.redis = redis_client
-    sync_task = asyncio.create_task(click_sync_worker(redis_client))
     yield
-    sync_task.cancel()
-    with contextlib.suppress(asyncio.CancelledError):
-        await sync_task
     await redis_client.aclose()
 
 
