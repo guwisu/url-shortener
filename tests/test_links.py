@@ -123,7 +123,9 @@ async def test_deactivate_and_activate_user_link(
     short_code = link_data["short_code"]
     assert create_resp.json()["is_active"] is True
 
-    deactivate_resp = await auth_client_1.patch(f"/api/v1/links/{short_code}/deactivate")
+    deactivate_resp = await auth_client_1.patch(
+        f"/api/v1/links/{short_code}/deactivate"
+    )
 
     assert deactivate_resp.status_code == 200
     assert deactivate_resp.json()["is_active"] is False
@@ -148,7 +150,9 @@ async def test_change_someones_link(
     delete_resp = await auth_client_2.delete(f"/api/v1/links/{short_code}")
     assert delete_resp.status_code == 404
 
-    deactivate_resp = await auth_client_2.patch(f"/api/v1/links/{short_code}/deactivate")
+    deactivate_resp = await auth_client_2.patch(
+        f"/api/v1/links/{short_code}/deactivate"
+    )
     assert deactivate_resp.status_code == 404
 
     activate_resp = await auth_client_2.patch(f"/api/v1/links/{short_code}/activate")
