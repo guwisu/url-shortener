@@ -1,7 +1,7 @@
 [project]
 name = "url-shortener"
 version = "0.1.0"
-description = "Add your description here"
+description = "URL shortener with user authentication, link management, click tracking, and fast caching."
 readme = "README.md"
 authors = [
     { name = "guwisu"}

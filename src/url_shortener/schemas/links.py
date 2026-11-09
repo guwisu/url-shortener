@@ -45,5 +45,5 @@ class LinkResponse(LinkPublic):
     expires_at: datetime | None
 
 
-class RedirectResponse(BaseModel):
+class RedirectTarget(BaseModel):
     original_url: str

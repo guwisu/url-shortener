@@ -103,12 +103,11 @@ async def test_delete_user_link(auth_client_1: AsyncClient) -> None:
     assert create_resp.status_code == 201
 
     link_data = create_resp.json()
-    link_id = link_data["id"]
     short_code = link_data["short_code"]
 
-    delete_resp = await auth_client_1.delete(f"/api/v1/links/{link_id}")
+    delete_resp = await auth_client_1.delete(f"/api/v1/links/{short_code}")
     assert delete_resp.status_code == 200
-    assert delete_resp.json()["id"] == link_id
+    assert delete_resp.json()["short_code"] == short_code
 
     get_resp = await auth_client_1.get(f"/api/v1/links/{short_code}")
     assert get_resp.status_code == 404
@@ -121,11 +120,10 @@ async def test_deactivate_and_activate_user_link(
     assert create_resp.status_code == 201
 
     link_data = create_resp.json()
-    link_id = link_data["id"]
     short_code = link_data["short_code"]
     assert create_resp.json()["is_active"] is True
 
-    deactivate_resp = await auth_client_1.patch(f"/api/v1/links/{link_id}/deactivate")
+    deactivate_resp = await auth_client_1.patch(f"/api/v1/links/{short_code}/deactivate")
 
     assert deactivate_resp.status_code == 200
     assert deactivate_resp.json()["is_active"] is False
@@ -133,7 +131,7 @@ async def test_deactivate_and_activate_user_link(
     redirect_resp = await auth_client_1.get(f"/{short_code}")
     assert redirect_resp.status_code == 410
 
-    activate_resp = await auth_client_1.patch(f"/api/v1/links/{link_id}/activate")
+    activate_resp = await auth_client_1.patch(f"/api/v1/links/{short_code}/activate")
     assert activate_resp.status_code == 200
     assert activate_resp.json()["is_active"] is True
 
@@ -145,16 +143,15 @@ async def test_change_someones_link(
     assert create_resp.status_code == 201
 
     link_data = create_resp.json()
-    link_id = link_data["id"]
     short_code = link_data["short_code"]
 
-    delete_resp = await auth_client_2.delete(f"/api/v1/links/{link_id}")
+    delete_resp = await auth_client_2.delete(f"/api/v1/links/{short_code}")
     assert delete_resp.status_code == 404
 
-    deactivate_resp = await auth_client_2.patch(f"/api/v1/links/{link_id}/deactivate")
+    deactivate_resp = await auth_client_2.patch(f"/api/v1/links/{short_code}/deactivate")
     assert deactivate_resp.status_code == 404
 
-    activate_resp = await auth_client_2.patch(f"/api/v1/links/{link_id}/activate")
+    activate_resp = await auth_client_2.patch(f"/api/v1/links/{short_code}/activate")
     assert activate_resp.status_code == 404
 
     redirect_resp = await auth_client_2.get(f"/{short_code}")

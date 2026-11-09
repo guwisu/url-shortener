@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import RedirectResponse
 
 from url_shortener.api.dependencies import (
@@ -34,12 +34,7 @@ async def get_by_code(
     current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[LinkService, Depends(get_link_service)],
 ):
-    link = await service.get_by_code(current_user.id, code)
-    if not link:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Link not found"
-        )
-    return link
+    return await service.get_by_code(current_user.id, code)
 
 
 @redirect_router.get("/{code}")
@@ -63,28 +58,28 @@ async def get_all_by_user(
     return await service.get_all_by_user(current_user.id, skip, limit)
 
 
-@router.delete("/{link_id}", response_model=LinkResponse)
+@router.delete("/{code}", response_model=LinkResponse)
 async def delete_user_link(
-    link_id: int,
+    code: str,
     current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[LinkService, Depends(get_link_service)],
 ) -> LinkResponse:
-    return await service.delete_user_link(current_user.id, link_id)
+    return await service.delete_user_link(current_user.id, code)
 
 
-@router.patch("/{link_id}/deactivate", response_model=LinkResponse)
+@router.patch("/{code}/deactivate", response_model=LinkResponse)
 async def deactivate_user_link(
-    link_id: int,
+    code: str,
     current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[LinkService, Depends(get_link_service)],
 ) -> LinkResponse:
-    return await service.set_active(current_user.id, link_id, value=False)
+    return await service.set_active(current_user.id, code, value=False)
 
 
-@router.patch("/{link_id}/activate", response_model=LinkResponse)
+@router.patch("/{code}/activate", response_model=LinkResponse)
 async def activate_user_link(
-    link_id: int,
+    code: str,
     current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[LinkService, Depends(get_link_service)],
 ) -> LinkResponse:
-    return await service.set_active(current_user.id, link_id, value=True)
+    return await service.set_active(current_user.id, code, value=True)
