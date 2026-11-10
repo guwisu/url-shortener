@@ -3,7 +3,6 @@ from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from sqlalchemy.types import JSON
 from url_shortener.core.exceptions import (
     AliasAlreadyExists,
     InvalidCredentials,
@@ -38,11 +37,10 @@ async def service_unavailable_handler(request: Request, exc: Exception):
         content={"detail": "Service temporarily unavailable. Please try again."},
     )
 
+
 async def alias_already_exists(request: Request, exc: Exception):
-    return JSONResponse(
-        status_code=409,
-        content={"detail": "Alias is already taken"}
-    )
+    return JSONResponse(status_code=409, content={"detail": "Alias is already taken"})
+
 
 def setup_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(LinkNotFound, link_not_found_handler)
