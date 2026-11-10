@@ -217,7 +217,9 @@ async def test_redirect_uses_cache(client: AsyncClient, redis_client: Redis) -> 
     assert int(clicks) == 1
 
 
-async def test_redirect_deactivated_in_cache(client: AsyncClient, redis_client: Redis) -> None:
+async def test_redirect_deactivated_in_cache(
+    client: AsyncClient, redis_client: Redis
+) -> None:
     short_code = "dead123"
 
     await redis_client.set(
@@ -241,12 +243,14 @@ async def test_redirect_deactivated_in_cache(client: AsyncClient, redis_client: 
         "http://[::1]/",
     ],
 )
-async def test_create_link_private_url_fails(auth_client_1: AsyncClient, url: str) -> None:
+async def test_create_link_private_url_fails(
+    auth_client_1: AsyncClient, url: str
+) -> None:
     created_resp = await create_link(auth_client_1, url)
     assert created_resp.status_code == 422
 
 
-async def test_link_rate_limit(auth_client_1: AsyncClient, enabled_limiter) -> None -> None:
+async def test_link_rate_limit(auth_client_1: AsyncClient, enabled_limiter) -> None:
     for _ in range(20):
         created_resp = await create_link(auth_client_1, "https://example.com")
         assert created_resp.status_code == 201
