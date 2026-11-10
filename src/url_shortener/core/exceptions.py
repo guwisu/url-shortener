@@ -20,3 +20,7 @@ class LinkDeactivated(AppException):
 
 class ServiceUnavailable(AppException):
     pass
+
+
+class AliasAlreadyExists(AppException):
+    pass

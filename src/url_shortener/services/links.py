@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 
 from url_shortener.core.config import settings
 from url_shortener.core.exceptions import (
+    AliasAlreadyExists,
     LinkDeactivated,
     LinkNotFound,
     ServiceUnavailable,
@@ -21,25 +22,42 @@ class LinkService:
         self.cache = cache
 
     async def create_link(
-        self, user_id: int, original_url: str, expires_at: datetime | None
+        self,
+        user_id: int,
+        original_url: str,
+        alias: str | None,
+        expires_at: datetime | None,
     ) -> LinkResponse:
-        for _ in range(5):
-            short_code = generate_short_code()
-            if short_code in settings.SYSTEM_WORDS:
-                continue
+        if alias:
+            if alias in settings.SYSTEM_WORDS:
+                raise AliasAlreadyExists
             try:
-                model = await self.repo.add(
-                    user_id, original_url, short_code, expires_at
-                )
+                link = await self.repo.add(user_id, original_url, alias, expires_at)
                 await self.repo.commit()
-                return LinkResponse.model_validate(model)
+                return LinkResponse.model_validate(link)
             except IntegrityError as e:
                 await self.repo.rollback()
                 if "short_code" in str(e.orig):
-                    continue
+                    raise AliasAlreadyExists
                 raise
+        else:
+            for _ in range(5):
+                short_code = generate_short_code()
+                if short_code in settings.SYSTEM_WORDS:
+                    continue
+                try:
+                    link = await self.repo.add(
+                        user_id, original_url, short_code, expires_at
+                    )
+                    await self.repo.commit()
+                    return LinkResponse.model_validate(link)
+                except IntegrityError as e:
+                    await self.repo.rollback()
+                    if "short_code" in str(e.orig):
+                        continue
+                    raise
 
-        raise ServiceUnavailable
+            raise ServiceUnavailable
 
     async def get_by_code(self, user_id: int, code: str) -> LinkResponse | None:
         link = await self.repo.get_by_code(user_id, code)

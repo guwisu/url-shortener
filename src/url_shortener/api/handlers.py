@@ -4,6 +4,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from url_shortener.core.exceptions import (
+    AliasAlreadyExists,
     InvalidCredentials,
     LinkDeactivated,
     LinkNotFound,
@@ -37,6 +38,10 @@ async def service_unavailable_handler(request: Request, exc: Exception):
     )
 
 
+async def alias_already_exists(request: Request, exc: Exception):
+    return JSONResponse(status_code=409, content={"detail": "Alias is already taken"})
+
+
 def setup_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(LinkNotFound, link_not_found_handler)
     app.add_exception_handler(LinkDeactivated, link_deactivated_handler)
@@ -44,3 +49,4 @@ def setup_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(InvalidCredentials, invalid_credentials_handler)
     app.add_exception_handler(ServiceUnavailable, service_unavailable_handler)
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(AliasAlreadyExists, alias_already_exists)

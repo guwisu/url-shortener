@@ -11,11 +11,14 @@ from url_shortener.utils.code_generator import generate_short_code
 
 
 async def create_link(
-    auth_client_1: AsyncClient, url: str, expires_at: str | None = None
+    auth_client: AsyncClient,
+    url: str,
+    alias: str | None = None,
+    expires_at: str | None = None,
 ):
-    return await auth_client_1.post(
+    return await auth_client.post(
         "/api/v1/links",
-        json={"url": url, "expires_at": expires_at},
+        json={"url": url, "alias": alias, "expires_at": expires_at},
     )
 
 
@@ -193,7 +196,7 @@ async def test_non_authorized_client_requests(client: AsyncClient) -> None:
     assert get_resp.status_code == 401
 
 
-async def test_redirect_uses_cache(client: AsyncClient, redis_client: Redis):
+async def test_redirect_uses_cache(client: AsyncClient, redis_client: Redis) -> None:
 
     short_code = "fake123"
     cache_key = f"link:{short_code}"
@@ -214,7 +217,9 @@ async def test_redirect_uses_cache(client: AsyncClient, redis_client: Redis):
     assert int(clicks) == 1
 
 
-async def test_redirect_deactivated_in_cache(client: AsyncClient, redis_client: Redis):
+async def test_redirect_deactivated_in_cache(
+    client: AsyncClient, redis_client: Redis
+) -> None:
     short_code = "dead123"
 
     await redis_client.set(
@@ -238,15 +243,37 @@ async def test_redirect_deactivated_in_cache(client: AsyncClient, redis_client: 
         "http://[::1]/",
     ],
 )
-async def test_create_link_private_url_fails(auth_client_1: AsyncClient, url: str):
+async def test_create_link_private_url_fails(
+    auth_client_1: AsyncClient, url: str
+) -> None:
     created_resp = await create_link(auth_client_1, url)
     assert created_resp.status_code == 422
 
 
-async def test_link_rate_limit(auth_client_1, enabled_limiter):
+async def test_link_rate_limit(auth_client_1: AsyncClient, enabled_limiter) -> None:
     for _ in range(20):
         created_resp = await create_link(auth_client_1, "https://example.com")
         assert created_resp.status_code == 201
 
     created_resp = await create_link(auth_client_1, "https://example.com")
     assert created_resp.status_code == 429
+
+
+async def test_redirect_by_alias(auth_client_1: AsyncClient) -> None:
+    created_resp = await create_link(
+        auth_client=auth_client_1, url="https://example.com/alias", alias="test_alias"
+    )
+    assert created_resp.status_code == 201
+    assert created_resp.json()["short_code"] == "test_alias"
+
+    redirect_resp = await auth_client_1.get("/test_alias")
+
+    assert redirect_resp.status_code == 307
+
+
+@pytest.mark.parametrize("alias", ["api", "metrics"])
+async def test_use_system_word_as_alias(auth_client_1: AsyncClient, alias: str) -> None:
+    created_resp = await create_link(
+        auth_client=auth_client_1, url="https://example.com/alias", alias=alias
+    )
+    assert created_resp.status_code == 409
