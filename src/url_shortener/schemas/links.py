@@ -13,6 +13,7 @@ from pydantic import (
 
 class LinkCreate(BaseModel):
     url: HttpUrl = Field(max_length=2048)
+    alias: str | None = Field(max_length=16, pattern=r"^[a-zA-Z0-9_-]+$")
     expires_at: FutureDatetime | None = None
 
     @field_validator("url")
