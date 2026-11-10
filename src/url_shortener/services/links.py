@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 
 from url_shortener.core.config import settings
 from url_shortener.core.exceptions import (
+    AliasAlreadyExists,
     LinkDeactivated,
     LinkNotFound,
     ServiceUnavailable,
@@ -21,8 +22,20 @@ class LinkService:
         self.cache = cache
 
     async def create_link(
-        self, user_id: int, original_url: str, expires_at: datetime | None
+        self, user_id: int, original_url: str, alias: str | None, expires_at: datetime | None
     ) -> LinkResponse:
+        if alias:
+            if alias in settings.SYSTEM_WORDS:
+                raise AliasAlreadyExists
+            try:
+                await self.repo.add(
+                    user_id, original_url, alias, expires_at
+                )
+            except IntegrityError as e:
+                await self.repo.rollback()
+                if "short_code" in str(e.orig):
+                    raise AliasAlreadyExists
+                raise
         for _ in range(5):
             short_code = generate_short_code()
             if short_code in settings.SYSTEM_WORDS:
