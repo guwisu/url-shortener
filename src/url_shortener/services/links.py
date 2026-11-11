@@ -34,6 +34,7 @@ class LinkService:
             try:
                 link = await self.repo.add(user_id, original_url, alias, expires_at)
                 await self.repo.commit()
+                await self.cache.delete(alias)
                 return LinkResponse.model_validate(link)
             except IntegrityError as e:
                 await self.repo.rollback()
@@ -50,6 +51,7 @@ class LinkService:
                         user_id, original_url, short_code, expires_at
                     )
                     await self.repo.commit()
+                    await self.cache.delete(short_code)
                     return LinkResponse.model_validate(link)
                 except IntegrityError as e:
                     await self.repo.rollback()
