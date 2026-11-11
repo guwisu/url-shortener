@@ -1,7 +1,5 @@
 from datetime import UTC, datetime
 
-from sqlalchemy.exc import IntegrityError
-
 from url_shortener.core.config import settings
 from url_shortener.core.exceptions import (
     AliasAlreadyExists,
@@ -31,33 +29,29 @@ class LinkService:
         if alias:
             if alias in settings.SYSTEM_WORDS:
                 raise AliasAlreadyExists
-            try:
-                link = await self.repo.add(user_id, original_url, alias, expires_at)
-                await self.repo.commit()
-                await self.cache.delete(alias)
-                return LinkResponse.model_validate(link)
-            except IntegrityError as e:
-                await self.repo.rollback()
-                if "short_code" in str(e.orig):
-                    raise AliasAlreadyExists
-                raise
+
+            link = await self.repo.add(user_id, original_url, alias, expires_at)
+            if not link:
+                raise AliasAlreadyExists
+
+            await self.repo.commit()
+            await self.cache.delete(alias)
+            return LinkResponse.model_validate(link)
         else:
             for _ in range(5):
                 short_code = generate_short_code()
                 if short_code in settings.SYSTEM_WORDS:
                     continue
-                try:
-                    link = await self.repo.add(
-                        user_id, original_url, short_code, expires_at
-                    )
-                    await self.repo.commit()
-                    await self.cache.delete(short_code)
-                    return LinkResponse.model_validate(link)
-                except IntegrityError as e:
-                    await self.repo.rollback()
-                    if "short_code" in str(e.orig):
-                        continue
-                    raise
+
+                link = await self.repo.add(
+                    user_id, original_url, short_code, expires_at
+                )
+                if not link:
+                    continue
+
+                await self.repo.commit()
+                await self.cache.delete(short_code)
+                return LinkResponse.model_validate(link)
 
             raise ServiceUnavailable
 

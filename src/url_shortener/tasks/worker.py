@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import signal
+import sys
 
 from redis.asyncio import Redis
 
@@ -11,25 +13,38 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 
-async def click_sync_worker(redis_client: Redis):
+async def click_sync_worker(redis_client: Redis, stop_event: asyncio.Event):
     log.info("Starting click sync worker...")
-    while True:
-        await asyncio.sleep(30)
 
+    while not stop_event.is_set():
         async with async_session_factory() as session:
             try:
                 await sync_clicks_to_db(redis_client, session)
             except Exception as e:  # noqa: BLE001
                 log.error(f"Redis error: {e}")
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=30.0)
+        except TimeoutError:
+            pass
 
 
 async def main():
+    stop_event = asyncio.Event()
+    loop = asyncio.get_running_loop()
+
+    if sys.platform != "win32":
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            loop.add_signal_handler(sig, stop_event.set)
+    else:
+        pass
     redis_client = Redis.from_url(url=settings.redis_url, decode_responses=True)
     try:
-        await click_sync_worker(redis_client)
-    except asyncio.CancelledError:
-        log.info("Worker cancelled, shutting down...")
+        await click_sync_worker(redis_client, stop_event)
+    except KeyboardInterrupt:
+        log.info("Received KeyboardInterrupt (Windows)")
+        stop_event.set()
     finally:
+        log.info("Worker shutting down gracefully...")
         await redis_client.aclose()
 
 

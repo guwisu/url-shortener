@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import delete, select, update
+from sqlalchemy.dialects.postgresql import insert
 
 from url_shortener.models import Link
 from url_shortener.repositories.base import BaseRepository
@@ -15,7 +16,7 @@ class LinkRepository(BaseRepository[Link]):
         original_url: str,
         short_code: str,
         expires_at: datetime | None = None,
-    ) -> Link:
+    ) -> Link | None:
         stmt = (
             insert(self.model)
             .values(
@@ -24,10 +25,11 @@ class LinkRepository(BaseRepository[Link]):
                 short_code=short_code,
                 expires_at=expires_at,
             )
+            .on_conflict_do_nothing(index_elements=["short_code"])
             .returning(self.model)
         )
         result = await self.session.execute(stmt)
-        return result.scalar_one()
+        return result.scalar_one_or_none()
 
     async def get_by_code(self, user_id: int, code: str) -> Link | None:
         query = select(self.model).where(

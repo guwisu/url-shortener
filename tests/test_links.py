@@ -278,6 +278,7 @@ async def test_use_system_word_as_alias(auth_client_1: AsyncClient, alias: str) 
     )
     assert created_resp.status_code == 409
 
+
 async def test_redirect_then_create_and_redirect(auth_client_1: AsyncClient) -> None:
     redirect_resp = await auth_client_1.get("/test_code")
     assert redirect_resp.status_code == 404
@@ -286,7 +287,6 @@ async def test_redirect_then_create_and_redirect(auth_client_1: AsyncClient) -> 
         auth_client=auth_client_1, url="https://example.com/alias", alias="test_code"
     )
     assert created_resp.status_code == 201
-    
+
     redirect_resp = await auth_client_1.get("/test_code")
     assert redirect_resp.status_code == 307
-    

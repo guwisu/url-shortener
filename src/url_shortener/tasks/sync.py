@@ -47,9 +47,11 @@ async def sync_clicks_to_db(redis: Redis, session: AsyncSession) -> None:
         try:
             renamed = await redis.renamenx(key, processing_key)
             if not renamed:
-                log.warning(f"Processing key {processing_key} already exists. Skipping.")
+                log.warning(
+                    f"Processing key {processing_key} already exists. Skipping."
+                )
                 continue
-                
+
         except RedisError:
             continue
 
