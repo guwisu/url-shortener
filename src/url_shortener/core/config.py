@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
     RATE_LIMIT_ENABLED: bool = True
 
-    CELERY_BROKER_URL: str = "amqp://guest:guest@localhost:5672//"
+    CELERY_BROKER_URL: str = "amqp://guest:guest@rabbitmq:5672//"
 
     @property
     def db_url(self) -> str:

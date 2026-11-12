@@ -7,6 +7,7 @@ from url_shortener.core.rate_limit import limiter
 from url_shortener.schemas import TokenResponse, UserCreate, UserResponse
 from url_shortener.schemas.users import UserLogin
 from url_shortener.services import AuthService
+from url_shortener.tasks.emails import send_welcome_email_task
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -20,7 +21,9 @@ async def register(
     body: UserCreate,
     service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> UserResponse:
-    return await service.register(body.email, body.password)
+    user = await service.register(body.email, body.password)
+    send_welcome_email_task.delay(user.email)
+    return user
 
 
 @router.post("/login", response_model=TokenResponse)

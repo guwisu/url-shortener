@@ -12,4 +12,4 @@ celery_app.conf.update(
     enable_utc=True,
 )
 
-celery_app.conf.imports = []
+celery_app.conf.imports = ["url_shortener.tasks.emails"]
