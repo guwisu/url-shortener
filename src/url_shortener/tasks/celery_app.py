@@ -12,4 +12,14 @@ celery_app.conf.update(
     enable_utc=True,
 )
 
-celery_app.conf.imports = ["url_shortener.tasks.emails"]
+celery_app.conf.imports = [
+    "url_shortener.tasks.emails",
+    "url_shortener.tasks.maintenance",
+]
+
+celery_app.conf.beat_schedule = {
+    "deactivate_expired_links": {
+        "task": "url_shortener.tasks.maintenance.deactivate_expired_links_async",
+        "schedule": 15.0,
+    }
+}
