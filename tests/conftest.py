@@ -1,5 +1,5 @@
 from collections.abc import AsyncGenerator
-
+from unittest.mock import patch
 import pytest
 from alembic import command
 from alembic.config import Config
@@ -167,3 +167,8 @@ async def auth_client_1(make_client, user_1: User):
 async def auth_client_2(make_client, user_2: User):
     async with make_client(user_2) as c:
         yield c
+
+@pytest.fixture(autouse=True)
+def mock_celery_tasks():
+    with patch("url_shortener.tasks.emails.send_welcome_email_task.delay") as mock_delay:
+        yield mock_delay
