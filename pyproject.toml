@@ -21,6 +21,7 @@ dependencies = [
     "redis>=8.1.0",
     "slowapi>=0.1.10",
     "celery>=5.7.0",
+    "httpx>=0.28.1",
 ]
 
 [build-system]
