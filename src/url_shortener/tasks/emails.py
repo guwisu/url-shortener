@@ -18,12 +18,9 @@ async def _send_welcome_email_async(email: str):
         log.info("Email sent successfully")
 
 
-@celery_app.task(bind=True, max_retries=3)
+@celery_app.task(bind=True, max_retries=3, acks_late=True, retry_backoff=True)
 def send_welcome_email_task(self, email: str):
     try:
         asyncio.run(_send_welcome_email_async(email))
-    except ConnectionError as e:
-        pause = 5 * (2**self.request.retries)
-        log.error(f"Error! Trying again in {pause} sec...")
-
-        raise self.retry(exc=e, countdown=pause)
+    except Exception as e:  # noqa: BLE001
+        raise self.retry(exc=e)

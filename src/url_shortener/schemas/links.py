@@ -36,6 +36,8 @@ class LinkPublic(BaseModel):
     short_code: str
     clicks_count: int
     is_active: bool
+    is_alive: bool
+    last_checked_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

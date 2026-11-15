@@ -45,6 +45,8 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -99,7 +101,7 @@ services:
       
   celery_worker:
     build: .
-    container_name: url-shortener-celery
+    container_name: url-shortener-celery-worker
     env_file: .env
     environment:
       POSTGRES_HOST: postgres
@@ -110,7 +112,27 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
-    command: ["celery", "-A", "url_shortener.tasks.celery_app", "worker", "-B", "-s", "/tmp/celerybeat-schedule", "--loglevel=info"]
+      migrate:
+        condition: service_completed_successfully
+    command: ["celery", "-A", "url_shortener.tasks.celery_app", "worker", "--loglevel=info"]
+    restart: unless-stopped
+  
+  celery_beat:
+    build: .
+    container_name: url-shortener-celery-beat
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      CELERY_BROKER_URL: amqp://guest:guest@rabbitmq:5672//
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    command: ["celery", "-A", "url_shortener.tasks.celery_app", "beat", "-s", "/tmp/celerybeat-schedule", "--loglevel=info"]
     restart: unless-stopped
 
 volumes:

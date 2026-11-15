@@ -29,7 +29,7 @@ async def register(
 ) -> UserResponse:
     user = await service.register(body.email, body.password)
     try:
-        await asyncio.to_thread(send_welcome_email_task.delay, user.email)
+        await asyncio.to_thread(send_welcome_email_task.delay, user.email)  # type: ignore[attr-defined]
     except Exception as e:  # noqa BLE001
         log.error(f"Failed to queue welcome email (RabbitQM down?): {e}")
     return user
