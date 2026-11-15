@@ -176,3 +176,14 @@ def mock_celery_tasks():
         "url_shortener.tasks.emails.send_welcome_email_task.delay"
     ) as mock_delay:
         yield mock_delay
+
+
+@pytest.fixture(autouse=True)
+def override_celery_database(db_session, monkeypatch):
+    test_celery_factory = async_sessionmaker(
+        bind=db_session.bind, expire_on_commit=False
+    )
+
+    monkeypatch.setattr(
+        "url_shortener.tasks.maintenance.celery_session_factory", test_celery_factory
+    )

@@ -1,8 +1,17 @@
+import asyncio
+from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock, patch
+
+import pytest
 from redis.asyncio import Redis
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from url_shortener.models import Link
+from url_shortener.tasks.emails import send_welcome_email_task
+from url_shortener.tasks.maintenance import _deactivate_expired_links_async
 from url_shortener.tasks.sync import sync_clicks_to_db
+from url_shortener.utils.security import check_url_is_alive
 
 
 async def test_sync_clicks_to_db(db_session: AsyncSession, redis_client: Redis, user_1):
@@ -25,3 +34,80 @@ async def test_sync_clicks_to_db(db_session: AsyncSession, redis_client: Redis, 
 
     redis_clicks = await redis_client.get(f"clicks:{short_code}")
     assert redis_clicks is None
+
+
+@pytest.mark.asyncio
+async def test_deactivate_expired_links(db_session: AsyncSession, user_1, monkeypatch):
+    expired_link = Link(
+        original_url="https://expired.com",
+        short_code="exp_link",
+        user_id=user_1.id,
+        is_active=True,
+        expires_at=datetime.now(UTC) - timedelta(days=1),
+    )
+    valid_link = Link(
+        original_url="https://valid.com",
+        short_code="val_link",
+        user_id=user_1.id,
+        is_active=True,
+        expires_at=datetime.now(UTC) + timedelta(days=1),
+    )
+
+    db_session.add_all([expired_link, valid_link])
+    await db_session.commit()
+
+    await _deactivate_expired_links_async()
+
+    db_session.expire_all()
+
+    exp_db = await db_session.scalar(
+        select(Link).where(Link.original_url == "https://expired.com")
+    )
+    val_db = await db_session.scalar(
+        select(Link).where(Link.original_url == "https://valid.com")
+    )
+
+    assert exp_db is not None
+    assert val_db is not None
+
+    assert exp_db.is_active is False
+    assert val_db.is_active is True
+
+
+def test_send_welcome_email_task():
+
+    with patch(
+        "url_shortener.tasks.emails._send_welcome_email_async", new_callable=AsyncMock
+    ) as mock_send:
+        result = send_welcome_email_task.apply(args=["test@example.com"])  # type: ignore[attr-defined]
+
+        assert result.status == "SUCCESS"
+
+        mock_send.assert_called_once_with("test@example.com")
+
+
+@pytest.mark.asyncio
+async def test_check_url_is_alive_logic(httpx_mock):
+    sem = asyncio.Semaphore(1)
+
+    httpx_mock.add_response(url="https://google.com", method="HEAD", status_code=200)
+
+    is_alive = await check_url_is_alive("https://google.com", sem)
+    assert is_alive is True
+
+    httpx_mock.add_response(
+        url="https://google.com/error", method="HEAD", status_code=500
+    )
+
+    is_dead = await check_url_is_alive("https://google.com/error", sem)
+    assert is_dead is False
+
+    httpx_mock.add_response(
+        url="https://google.com/fallback", method="HEAD", status_code=405
+    )
+    httpx_mock.add_response(
+        url="https://google.com/fallback", method="GET", status_code=200
+    )
+
+    is_fallback_alive = await check_url_is_alive("https://google.com/fallback", sem)
+    assert is_fallback_alive is True
