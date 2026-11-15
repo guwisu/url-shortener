@@ -1,4 +1,5 @@
 import asyncio
+import socket
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
@@ -9,7 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from url_shortener.models import Link
 from url_shortener.tasks.emails import send_welcome_email_task
-from url_shortener.tasks.maintenance import _deactivate_expired_links_async
+from url_shortener.tasks.maintenance import (
+    _check_url_is_alive_batch,
+    _deactivate_expired_links_async,
+)
 from url_shortener.tasks.sync import sync_clicks_to_db
 from url_shortener.utils.security import check_url_is_alive
 
@@ -87,20 +91,16 @@ def test_send_welcome_email_task():
 
 
 @pytest.mark.asyncio
-async def test_check_url_is_alive_logic(httpx_mock):
+async def test_check_url_is_alive_logic(httpx_mock, fake_dns):
     sem = asyncio.Semaphore(1)
 
     httpx_mock.add_response(url="https://google.com", method="HEAD", status_code=200)
-
-    is_alive = await check_url_is_alive("https://google.com", sem)
-    assert is_alive is True
+    assert await check_url_is_alive("https://google.com", sem) is True
 
     httpx_mock.add_response(
         url="https://google.com/error", method="HEAD", status_code=500
     )
-
-    is_dead = await check_url_is_alive("https://google.com/error", sem)
-    assert is_dead is False
+    assert await check_url_is_alive("https://google.com/error", sem) is False
 
     httpx_mock.add_response(
         url="https://google.com/fallback", method="HEAD", status_code=405
@@ -108,6 +108,40 @@ async def test_check_url_is_alive_logic(httpx_mock):
     httpx_mock.add_response(
         url="https://google.com/fallback", method="GET", status_code=200
     )
+    assert await check_url_is_alive("https://google.com/fallback", sem) is True
 
-    is_fallback_alive = await check_url_is_alive("https://google.com/fallback", sem)
-    assert is_fallback_alive is True
+
+@pytest.mark.asyncio
+async def test_check_url_is_alive_blocks_private_ip(httpx_mock, monkeypatch):
+    async def fake_getaddrinfo(host, port, **kwargs):
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 0))]
+
+    monkeypatch.setattr(asyncio.get_running_loop(), "getaddrinfo", fake_getaddrinfo)
+
+    assert await check_url_is_alive("https://evil.com", asyncio.Semaphore(1)) is False
+    assert httpx_mock.get_requests() == []
+
+
+@pytest.mark.asyncio
+async def test_dead_link_revives(db_session: AsyncSession, user_1, monkeypatch):
+    link = Link(
+        original_url="https://back.com",
+        short_code="back11",
+        user_id=user_1.id,
+        is_alive=False,
+    )
+    db_session.add(link)
+    await db_session.commit()
+
+    async def fake_check(url, semaphore):
+        return True
+
+    monkeypatch.setattr(
+        "url_shortener.tasks.maintenance.check_url_is_alive", fake_check
+    )
+
+    await _check_url_is_alive_batch()
+    await db_session.refresh(link)
+
+    assert link.is_alive is True
+    assert link.last_checked_at is not None

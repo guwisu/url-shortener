@@ -1,3 +1,5 @@
+import asyncio
+import socket
 from collections.abc import AsyncGenerator
 from unittest.mock import patch
 
@@ -187,3 +189,11 @@ def override_celery_database(db_session, monkeypatch):
     monkeypatch.setattr(
         "url_shortener.tasks.maintenance.celery_session_factory", test_celery_factory
     )
+
+
+@pytest.fixture
+async def fake_dns(monkeypatch):
+    async def fake_getaddrinfo(host, port, **kwargs):
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))]
+
+    monkeypatch.setattr(asyncio.get_running_loop(), "getaddrinfo", fake_getaddrinfo)
