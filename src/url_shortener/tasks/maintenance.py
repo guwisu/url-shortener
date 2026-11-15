@@ -26,44 +26,52 @@ async def _deactivate_expired_links_async():
 
 
 @celery_app.task(bind=True)
-def deactivate_expired_links_async(self):
+def deactivate_expired_links_task(self):
     log.info("Starting deactivate_expired_links task")
     asyncio.run(_deactivate_expired_links_async())
-    log.info("Completed deactivate_expired_links task")
 
 
-async def _check_url_is_alive_async():
+async def _check_url_is_alive_batch():
     async with celery_session_factory() as session:
         query = select(Link).where(Link.is_active.is_(True))
         result = await session.execute(query)
         links = list(result.scalars().all())
         if not links:
             return
+        semaphore = asyncio.Semaphore(20)
 
-        all_ids = {link.id for link in links}
-        need_ids = set()
+        tasks = [check_url_is_alive(link.original_url, semaphore) for link in links]
 
-        for link in links:
-            if not await check_url_is_alive(link.original_url):
-                need_ids.add(link.id)
+        results = await asyncio.gather(*tasks)
 
-        if need_ids:
-            alive_stmt = (
-                update(Link).where(Link.id.in_(need_ids)).values(is_alive=False)
+        alive_ids = []
+        dead_ids = []
+        now = datetime.now(UTC)
+
+        for link, is_alive in zip(links, results):
+            if is_alive:
+                alive_ids.append(link.id)
+            else:
+                dead_ids.append(link.id)
+
+        if alive_ids:
+            await session.execute(
+                update(Link)
+                .where(Link.id.in_(alive_ids))
+                .values(is_alive=True, last_checked_at=now)
             )
-            await session.execute(alive_stmt)
 
-        checked_stmt = (
-            update(Link)
-            .where(Link.id.in_(all_ids))
-            .values(last_checked_at=datetime.now(UTC))
-        )
-        await session.execute(checked_stmt)
+        if dead_ids:
+            await session.execute(
+                update(Link)
+                .where(Link.id.in_(dead_ids))
+                .values(is_alive=False, last_checked_at=now)
+            )
+
         await session.commit()
 
 
 @celery_app.task(bind=True)
-def check_url_is_alive_async(self):
+def check_url_is_alive_task(self):
     log.info("Starting check_url_is_alive_async task")
-    asyncio.run(_check_url_is_alive_async())
-    log.info("Completed check_url_is_alive_async task")
+    asyncio.run(_check_url_is_alive_batch())

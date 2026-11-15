@@ -38,9 +38,7 @@ class Link(Base):
         nullable=True,
     )
     is_alive: Mapped[bool] = mapped_column(
-        default=True,
-        server_default=text("true"),
-        nullable=False
+        default=True, server_default=text("true"), nullable=False
     )
     last_checked_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), default=None, nullable=True

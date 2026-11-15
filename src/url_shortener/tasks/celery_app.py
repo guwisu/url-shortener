@@ -21,11 +21,11 @@ celery_app.conf.imports = [
 
 celery_app.conf.beat_schedule = {
     "deactivate_expired_links": {
-        "task": "url_shortener.tasks.maintenance.deactivate_expired_links_async",
+        "task": "url_shortener.tasks.maintenance.deactivate_expired_links_task",
         "schedule": crontab(minute="*"),
     },
     "check_url_is_alive": {
-        "task": "url_shortener.tasks.maintenance.check_url_is_alive_async",
+        "task": "url_shortener.tasks.maintenance.check_url_is_alive_task",
         "schedule": crontab(minute=0),
     },
 }
