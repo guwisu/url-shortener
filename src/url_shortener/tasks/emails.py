@@ -28,7 +28,4 @@ async def _send_welcome_email_async(email: str):
     acks_late=True,
 )
 def send_welcome_email_task(self, email: str):
-    try:
-        asyncio.run(_send_welcome_email_async(email))
-    except Exception as e:  # noqa: BLE001
-        raise self.retry(exc=e)
+    asyncio.run(_send_welcome_email_async(email))
