@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, status
@@ -7,8 +9,13 @@ from url_shortener.core.rate_limit import limiter
 from url_shortener.schemas import TokenResponse, UserCreate, UserResponse
 from url_shortener.schemas.users import UserLogin
 from url_shortener.services import AuthService
+from url_shortener.tasks.emails import send_welcome_email_task
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+logging.basicConfig(level=logging.INFO)
+
+log = logging.getLogger(__name__)
 
 
 @router.post(
@@ -20,7 +27,12 @@ async def register(
     body: UserCreate,
     service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> UserResponse:
-    return await service.register(body.email, body.password)
+    user = await service.register(body.email, body.password)
+    try:
+        await asyncio.to_thread(send_welcome_email_task.delay, user.email)  # type: ignore[attr-defined]
+    except Exception as e:  # noqa: BLE001
+        log.error(f"Failed to queue welcome email (RabbitMQ down?): {e}")
+    return user
 
 
 @router.post("/login", response_model=TokenResponse)

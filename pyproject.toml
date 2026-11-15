@@ -20,6 +20,8 @@ dependencies = [
     "python-multipart>=0.0.32",
     "redis>=8.1.0",
     "slowapi>=0.1.10",
+    "celery>=5.7.0",
+    "httpx>=0.28.1",
 ]
 
 [build-system]
@@ -34,6 +36,7 @@ dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
+    "pytest-httpx>=0.36.2",
     "ruff>=0.17.1",
 ]
 
@@ -42,3 +45,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 pythonpath = ["src"]
 testpaths = ["tests"]
+
+[[tool.mypy.overrides]]
+module = "celery.*"
+ignore_missing_imports = true

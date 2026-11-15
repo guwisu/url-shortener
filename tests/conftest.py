@@ -1,4 +1,7 @@
+import asyncio
+import socket
 from collections.abc import AsyncGenerator
+from unittest.mock import patch
 
 import pytest
 from alembic import command
@@ -167,3 +170,30 @@ async def auth_client_1(make_client, user_1: User):
 async def auth_client_2(make_client, user_2: User):
     async with make_client(user_2) as c:
         yield c
+
+
+@pytest.fixture(autouse=True)
+def mock_celery_tasks():
+    with patch(
+        "url_shortener.tasks.emails.send_welcome_email_task.delay"
+    ) as mock_delay:
+        yield mock_delay
+
+
+@pytest.fixture(autouse=True)
+def override_celery_database(db_session, monkeypatch):
+    test_celery_factory = async_sessionmaker(
+        bind=db_session.bind, expire_on_commit=False
+    )
+
+    monkeypatch.setattr(
+        "url_shortener.tasks.maintenance.celery_session_factory", test_celery_factory
+    )
+
+
+@pytest.fixture
+async def fake_dns(monkeypatch):
+    async def fake_getaddrinfo(host, port, **kwargs):
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))]
+
+    monkeypatch.setattr(asyncio.get_running_loop(), "getaddrinfo", fake_getaddrinfo)

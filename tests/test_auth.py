@@ -75,3 +75,9 @@ async def test_register_rate_limit(client: AsyncClient, enabled_limiter):
         json={"email": "user6@example.com", "password": "test_password123"},
     )
     assert resp.status_code == 429
+
+
+async def test_register_survives_broker_down(client: AsyncClient, mock_celery_tasks):
+    mock_celery_tasks.side_effect = ConnectionError("broker down")
+    response = await register_user(client)
+    assert response.status_code == 201
