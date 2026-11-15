@@ -83,11 +83,11 @@ class LinkService:
             raise LinkNotFound
 
         now = datetime.now(UTC)
-        is_alive = model.is_active and (
+        is_available = model.is_active and (
             model.expires_at is None or model.expires_at > now
         )
 
-        if not is_alive:
+        if not is_available:
             await self.cache.set(model.short_code, {"is_active": False}, 60)
             raise LinkDeactivated
 

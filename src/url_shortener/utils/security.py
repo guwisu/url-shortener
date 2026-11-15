@@ -38,6 +38,9 @@ async def check_url_is_alive(url: str, semaphore: asyncio.Semaphore) -> bool:
 
                 return 200 <= response.status_code < 400
 
+        except socket.gaierror as e:
+            log.info(f"URL {url} is dead (DNS): {e}")
+            return False
         except httpx.RequestError as re:
             log.info(f"URL {url} is dead: {re}")
             return False
