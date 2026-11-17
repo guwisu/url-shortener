@@ -2,6 +2,7 @@ import asyncio
 import logging
 from datetime import UTC, datetime
 
+import httpx
 from sqlalchemy import select, update
 
 from url_shortener.db.session import celery_session_factory
@@ -40,9 +41,17 @@ async def _check_url_is_alive_batch():
             return
         semaphore = asyncio.Semaphore(20)
 
-        tasks = [check_url_is_alive(link.original_url, semaphore) for link in links]
-
-        results = await asyncio.gather(*tasks)
+        async with httpx.AsyncClient(
+            timeout=5.0,
+            headers={
+                "User-Agent": "url-shortener-bot/1.0 (+https://github.com/guwisu/url-shortener)"
+            },
+        ) as client:
+            tasks = [
+                check_url_is_alive(link.original_url, semaphore, client)
+                for link in links
+            ]
+            results = await asyncio.gather(*tasks)
 
         alive_ids = []
         dead_ids = []
