@@ -25,6 +25,10 @@ class Settings(BaseSettings):
 
     CELERY_BROKER_URL: str = "amqp://guest:guest@rabbitmq:5672//"
 
+    KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
+    KAFKA_CLICK_TOPIC: str = "clicks"
+    ANALYTICS_SALT: str = "super-secret-salt-change-me"
+    
     @property
     def db_url(self) -> str:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
