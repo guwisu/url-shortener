@@ -1,10 +1,12 @@
 from typing import Annotated
 
+from aiokafka import AIOKafkaProducer
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from url_shortener.core.config import settings
 from url_shortener.core.security import decode_access_token
 from url_shortener.db.session import get_db
 from url_shortener.models import User
@@ -12,6 +14,7 @@ from url_shortener.repositories import LinkRepository
 from url_shortener.repositories.users import UserRepository
 from url_shortener.services import AuthService, LinkService
 from url_shortener.services.cache import LinkCache
+from url_shortener.services.events import EventPublisher
 
 
 def get_link_repository(
@@ -65,3 +68,13 @@ async def get_current_user(
     if not user:
         raise HTTPException(status_code=401)
     return user
+
+
+def get_kafka_producer(request: Request) -> AIOKafkaProducer:
+    return request.app.state.kafka_producer
+
+
+def get_event_publisher(
+    producer: Annotated[AIOKafkaProducer, Depends(get_kafka_producer)],
+) -> EventPublisher:
+    return EventPublisher(producer=producer, topic=settings.KAFKA_CLICK_TOPIC)
