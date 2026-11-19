@@ -29,19 +29,29 @@ class Settings(BaseSettings):
     KAFKA_CLICK_TOPIC: str = "clicks"
     ANALYTICS_SALT: str = "super-secret-salt-change-me"
 
+    MONGO_DB: str
+    MONGO_USER: str
+    MONGO_PASSWORD: str
+    MONGO_HOST: str
+    MONGO_PORT: str
+
     @property
     def db_url(self) -> str:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-
-    @property
-    def redis_url(self) -> str:
-        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}"
 
     @property
     def test_db_url(self) -> str:
         return (
             "postgresql+asyncpg://test_user:test_pass@localhost:5434/test_url_shortener"
         )
+
+    @property
+    def redis_url(self) -> str:
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}"
+
+    @property
+    def mongo_url(self) -> str:
+        return f"mongodb://{self.MONGO_USER}:{self.MONGO_PASSWORD}@{self.MONGO_HOST}:{self.MONGO_PORT}/"
 
     model_config = SettingsConfigDict(
         env_file=".env",
