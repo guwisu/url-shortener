@@ -4,6 +4,7 @@ import uvicorn
 from aiokafka.producer.producer import AIOKafkaProducer
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pymongo import AsyncMongoClient
 from redis.asyncio import Redis
 
 from url_shortener.api.handlers import setup_exception_handlers
@@ -24,8 +25,12 @@ async def lifespan(app: FastAPI):
     await kafka_producer.start()
     app.state.kafka_producer = kafka_producer
 
+    mongo_client = AsyncMongoClient(settings.mongo_url)
+    app.state.mongo_client = mongo_client
+    
     yield
 
+    await mongo_client.close()
     await kafka_producer.stop()
     await redis_client.aclose()
 
