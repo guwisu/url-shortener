@@ -1,4 +1,5 @@
 import contextlib
+from typing import Any
 
 import uvicorn
 from aiokafka.producer.producer import AIOKafkaProducer
@@ -25,9 +26,11 @@ async def lifespan(app: FastAPI):
     await kafka_producer.start()
     app.state.kafka_producer = kafka_producer
 
-    mongo_client = AsyncMongoClient(settings.mongo_url)
+    mongo_client: AsyncMongoClient[dict[str, Any]] = AsyncMongoClient(
+        settings.mongo_url
+    )
     app.state.mongo_client = mongo_client
-    
+
     yield
 
     await mongo_client.close()

@@ -12,17 +12,21 @@ class ClickEvent(BaseModel):
     referer: str | None = None
     user_agent: str | None = None
 
+
 class DailyClicks(BaseModel):
     date: str
     clicks: int
+
 
 class RefererStat(BaseModel):
     referer: str
     clicks: int
 
+
 class DeviceStat(BaseModel):
     device: str
     clicks: int
+
 
 class LinkStatsResponse(BaseModel):
     short_code: str

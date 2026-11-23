@@ -4,10 +4,11 @@ import logging
 import signal
 import sys
 from datetime import datetime
+from typing import Any
 
 from aiokafka import AIOKafkaConsumer
 from pymongo import AsyncMongoClient, UpdateOne
-from pymongo.errors import BulkWriteError
+from pymongo.errors import BulkWriteError, PyMongoError
 
 from url_shortener.core.config import settings
 from url_shortener.db.mongo import ensure_click_events_indexes
@@ -26,7 +27,9 @@ async def process_messages(stop_event: asyncio.Event):
         auto_offset_reset="earliest",
     )
 
-    mongo_client = AsyncMongoClient(settings.mongo_url)
+    mongo_client: AsyncMongoClient[dict[str, Any]] = AsyncMongoClient(
+        settings.mongo_url
+    )
     db = mongo_client[settings.MONGO_DB]
     collection = db["click_events"]
 
@@ -57,7 +60,13 @@ async def process_messages(stop_event: asyncio.Event):
                             {"_id": doc_id}, {"$setOnInsert": data}, upsert=True
                         )
                         operations.append(op)
-                    except Exception as e:
+                    except (
+                        json.JSONDecodeError,
+                        UnicodeDecodeError,
+                        KeyError,
+                        ValueError,
+                        TypeError,
+                    ) as e:
                         log.error(f"Failed to parse message: {e}")
 
             if operations:
@@ -70,7 +79,7 @@ async def process_messages(stop_event: asyncio.Event):
                     )
                 except BulkWriteError as bwe:
                     log.error(f"MongoDB bulk write error: {bwe.details}")
-                except Exception as e:
+                except PyMongoError as e:
                     log.error(f"Failed to write to MongoDB: {e}")
     finally:
         log.info("Shutting down Consumer...")
