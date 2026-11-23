@@ -5,15 +5,17 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, status
 from fastapi.responses import RedirectResponse
 
 from url_shortener.api.dependencies import (
+    get_analytics_service,
     get_current_user,
     get_event_publisher,
     get_link_service,
 )
 from url_shortener.core.rate_limit import limiter
 from url_shortener.models import User
-from url_shortener.schemas.analytics import ClickEvent
+from url_shortener.schemas.analytics import ClickEvent, LinkStatsResponse
 from url_shortener.schemas.links import LinkCreate, LinkPublic, LinkResponse
 from url_shortener.services import LinkService
+from url_shortener.services.analytics import AnalyticsService
 from url_shortener.services.events import EventPublisher
 from url_shortener.utils.analytics import hash_ip
 
@@ -108,3 +110,16 @@ async def activate_user_link(
     service: Annotated[LinkService, Depends(get_link_service)],
 ) -> LinkResponse:
     return await service.set_active(current_user.id, code, value=True)
+
+
+@router.get("/{code}/stats", response_model=LinkStatsResponse)
+@limiter.limit("30/minute")
+async def get_link_stats(
+    request: Request,
+    code: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    service: Annotated[AnalyticsService, Depends(get_analytics_service)],
+    from_dt: Annotated[datetime | None, Query(alias="from")] = None,
+    to_dt: Annotated[datetime | None, Query(alias="to")] = None,
+) -> LinkStatsResponse:
+    return await service.get_link_stats(current_user.id, code, from_dt, to_dt)
