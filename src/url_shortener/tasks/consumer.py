@@ -8,6 +8,7 @@ from typing import Any
 
 from aiokafka import AIOKafkaConsumer
 from pymongo import AsyncMongoClient, UpdateOne
+from pymongo.asynchronous.collection import AsyncCollection
 from pymongo.errors import BulkWriteError, PyMongoError
 
 from url_shortener.core.config import settings
@@ -41,42 +42,24 @@ async def process_messages(stop_event: asyncio.Event):
     try:
         while not stop_event.is_set():
             result = await consumer.getmany(timeout_ms=1000, max_records=100)
-
             if not result:
                 continue
 
-            operations = []
+            raw_messages = [
+                msg.value
+                for messages in result.values()
+                for msg in messages
+                if msg.value is not None
+            ]
 
-            for messages in result.values():
-                for msg in messages:
-                    try:
-                        data = json.loads(msg.value.decode("utf-8"))
-                        doc_id = data.pop("event_id")
-                        data["_id"] = doc_id
-
-                        data["timestamp"] = datetime.fromisoformat(data["timestamp"])
-
-                        op = UpdateOne(
-                            {"_id": doc_id}, {"$setOnInsert": data}, upsert=True
-                        )
-                        operations.append(op)
-                    except (
-                        json.JSONDecodeError,
-                        UnicodeDecodeError,
-                        KeyError,
-                        ValueError,
-                        TypeError,
-                    ) as e:
-                        log.error(f"Failed to parse message: {e}")
-
-            if operations:
+            if raw_messages:
                 try:
-                    await collection.bulk_write(operations, ordered=False)
-
-                    await consumer.commit()
-                    log.info(
-                        f"Successfully processed and committed {len(operations)} events"
-                    )
+                    written = await write_click_events_batch(raw_messages, collection)
+                    if written:
+                        await consumer.commit()
+                        log.info(
+                            f"Successfully processed and committed {written} events"
+                        )
                 except BulkWriteError as bwe:
                     log.error(f"MongoDB bulk write error: {bwe.details}")
                 except PyMongoError as e:
@@ -99,6 +82,38 @@ async def main():
     except KeyboardInterrupt:
         log.info("Received KeyboardInterrupt (Windows)")
         stop_event.set()
+
+
+async def write_click_events_batch(
+    raw_messages: list[bytes],
+    collection: AsyncCollection[dict[str, Any]],
+) -> int:
+    operations: list[UpdateOne] = []
+
+    for raw in raw_messages:
+        try:
+            data = json.loads(raw.decode("utf-8"))
+            doc_id = data.pop("event_id")
+            data["_id"] = doc_id
+            data["timestamp"] = datetime.fromisoformat(data["timestamp"])
+
+            operations.append(
+                UpdateOne({"_id": doc_id}, {"$setOnInsert": data}, upsert=True)
+            )
+        except (
+            json.JSONDecodeError,
+            UnicodeDecodeError,
+            KeyError,
+            ValueError,
+            TypeError,
+        ) as e:
+            log.error(f"Failed to parse message: {e}")
+
+    if not operations:
+        return 0
+
+    await collection.bulk_write(operations, ordered=False)
+    return len(operations)
 
 
 if __name__ == "__main__":
