@@ -5,17 +5,17 @@ class Settings(BaseSettings):
     POSTGRES_DB: str
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
-    POSTGRES_PORT: int
-    POSTGRES_HOST: str
+    POSTGRES_PORT: int = 5432
+    POSTGRES_HOST: str = "localhost"
 
     JWT_SECRET_KEY: str
-    JWT_ALGORITHM: str
+    JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     CORS_ORIGINS: list[str] = ["*"]
 
-    REDIS_HOST: str
-    REDIS_PORT: int
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
 
     SYSTEM_WORDS: frozenset[str] = frozenset(
         {"api", "docs", "health", "redoc", "metrics"}
@@ -23,17 +23,17 @@ class Settings(BaseSettings):
 
     RATE_LIMIT_ENABLED: bool = True
 
-    CELERY_BROKER_URL: str
+    CELERY_BROKER_URL: str = "amqp://guest:guest@rabbitmq:5672//"
 
-    KAFKA_BOOTSTRAP_SERVERS: str
-    KAFKA_CLICK_TOPIC: str
+    KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
+    KAFKA_CLICK_TOPIC: str = "clicks"
     ANALYTICS_SALT: str
 
-    MONGO_DB: str
+    MONGO_DB: str = "url_shortener"
     MONGO_USER: str
     MONGO_PASSWORD: str
-    MONGO_HOST: str
-    MONGO_PORT: str
+    MONGO_HOST: str = "localhost"
+    MONGO_PORT: int = 27017
 
     @property
     def db_url(self) -> str:
