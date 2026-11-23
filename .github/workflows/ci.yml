@@ -65,17 +65,40 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      mongo:
+        image: mongo:7
+        ports:
+          - 27018:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand(\"ping\").ok' --quiet"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
       POSTGRES_DB: test_url_shortener
       POSTGRES_USER: test_user
       POSTGRES_PASSWORD: test_pass
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5434
-      
+
       REDIS_HOST: localhost
       REDIS_PORT: 6380
 
       JWT_SECRET_KEY: super-secret-test-key-at-least-32-bytes
+      JWT_ALGORITHM: HS256
+
+      CELERY_BROKER_URL: amqp://guest:guest@localhost:5672//
+
+      KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+      KAFKA_CLICK_TOPIC: clicks
+      ANALYTICS_SALT: test-salt-for-ci
+
+      MONGO_DB: test_url_shortener
+      MONGO_USER: mongo
+      MONGO_PASSWORD: mongo
+      MONGO_HOST: localhost
+      MONGO_PORT: 27018
 
     steps:
       - name: Checkout repository

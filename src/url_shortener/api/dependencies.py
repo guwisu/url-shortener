@@ -1,17 +1,23 @@
-from typing import Annotated
+from typing import Annotated, Any
 
+from aiokafka import AIOKafkaProducer
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pymongo import AsyncMongoClient
+from pymongo.asynchronous.collection import AsyncCollection
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from url_shortener.core.config import settings
 from url_shortener.core.security import decode_access_token
 from url_shortener.db.session import get_db
 from url_shortener.models import User
 from url_shortener.repositories import LinkRepository
 from url_shortener.repositories.users import UserRepository
 from url_shortener.services import AuthService, LinkService
+from url_shortener.services.analytics import AnalyticsService
 from url_shortener.services.cache import LinkCache
+from url_shortener.services.events import EventPublisher
 
 
 def get_link_repository(
@@ -65,3 +71,25 @@ async def get_current_user(
     if not user:
         raise HTTPException(status_code=401)
     return user
+
+
+def get_kafka_producer(request: Request) -> AIOKafkaProducer:
+    return request.app.state.kafka_producer
+
+
+def get_event_publisher(
+    producer: Annotated[AIOKafkaProducer, Depends(get_kafka_producer)],
+) -> EventPublisher:
+    return EventPublisher(producer=producer, topic=settings.KAFKA_CLICK_TOPIC)
+
+
+def get_click_events_collection(request: Request) -> AsyncCollection:
+    mongo_client: AsyncMongoClient[dict[str, Any]] = request.app.state.mongo_client
+    return mongo_client[settings.MONGO_DB]["click_events"]
+
+
+def get_analytics_service(
+    link_repo: Annotated[LinkRepository, Depends(get_link_repository)],
+    collection: Annotated[AsyncCollection, Depends(get_click_events_collection)],
+) -> AnalyticsService:
+    return AnalyticsService(link_repo, collection)
