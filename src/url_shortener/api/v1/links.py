@@ -85,30 +85,30 @@ async def get_all_by_user(
     return await service.get_all_by_user(current_user.id, skip, limit)
 
 
-@router.delete("/{code}", response_model=LinkResponse)
+@router.delete("/{code}", response_model=LinkPublic)
 async def delete_user_link(
     code: str,
     current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[LinkService, Depends(get_link_service)],
-) -> LinkResponse:
+) -> LinkPublic:
     return await service.delete_user_link(current_user.id, code)
 
 
-@router.patch("/{code}/deactivate", response_model=LinkResponse)
+@router.patch("/{code}/deactivate", response_model=LinkPublic)
 async def deactivate_user_link(
     code: str,
     current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[LinkService, Depends(get_link_service)],
-) -> LinkResponse:
+) -> LinkPublic:
     return await service.set_active(current_user.id, code, value=False)
 
 
-@router.patch("/{code}/activate", response_model=LinkResponse)
+@router.patch("/{code}/activate", response_model=LinkPublic)
 async def activate_user_link(
     code: str,
     current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[LinkService, Depends(get_link_service)],
-) -> LinkResponse:
+) -> LinkPublic:
     return await service.set_active(current_user.id, code, value=True)
 
 

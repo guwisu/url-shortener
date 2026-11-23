@@ -9,13 +9,13 @@ class Settings(BaseSettings):
     POSTGRES_HOST: str
 
     JWT_SECRET_KEY: str
-    JWT_ALGORITHM: str = "HS256"
+    JWT_ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     CORS_ORIGINS: list[str] = ["*"]
 
-    REDIS_HOST: str = "localhost"
-    REDIS_PORT: int = 6379
+    REDIS_HOST: str
+    REDIS_PORT: int
 
     SYSTEM_WORDS: frozenset[str] = frozenset(
         {"api", "docs", "health", "redoc", "metrics"}
@@ -23,11 +23,11 @@ class Settings(BaseSettings):
 
     RATE_LIMIT_ENABLED: bool = True
 
-    CELERY_BROKER_URL: str = "amqp://guest:guest@rabbitmq:5672//"
+    CELERY_BROKER_URL: str
 
-    KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
-    KAFKA_CLICK_TOPIC: str = "clicks"
-    ANALYTICS_SALT: str = "super-secret-salt-change-me"
+    KAFKA_BOOTSTRAP_SERVERS: str
+    KAFKA_CLICK_TOPIC: str
+    ANALYTICS_SALT: str
 
     MONGO_DB: str
     MONGO_USER: str
