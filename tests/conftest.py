@@ -1,7 +1,8 @@
 import asyncio
 import socket
 from collections.abc import AsyncGenerator
-from unittest.mock import patch
+from typing import Any
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from alembic import command
@@ -9,6 +10,8 @@ from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
 from limits.storage import MemoryStorage
 from limits.strategies import FixedWindowRateLimiter
+from pymongo import AsyncMongoClient
+from pymongo.asynchronous.collection import AsyncCollection
 from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
@@ -18,7 +21,11 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import NullPool
 
-from url_shortener.api.dependencies import get_redis
+from url_shortener.api.dependencies import (
+    get_click_events_collection,
+    get_event_publisher,
+    get_redis,
+)
 from url_shortener.core.config import settings
 from url_shortener.core.rate_limit import limiter
 from url_shortener.core.security import create_access_token, hash_password
@@ -94,6 +101,18 @@ async def redis_client() -> AsyncGenerator[Redis]:
     await redis.aclose()
 
 
+@pytest.fixture
+async def mongo_collection() -> AsyncGenerator[AsyncCollection[dict[str, Any]]]:
+    client: AsyncMongoClient[dict[str, Any]] = AsyncMongoClient(
+        "mongodb://localhost:27018/"
+    )
+    collection = client["test_url_shortener"]["click_events"]
+    await collection.delete_many({})
+    yield collection
+    await collection.delete_many({})
+    await client.close()
+
+
 @pytest.fixture(autouse=True)
 async def override_get_db(db_session: AsyncSession):
     async def _override():
@@ -112,6 +131,32 @@ async def override_get_redis(redis_client: Redis):
     app.dependency_overrides[get_redis] = _override
     yield
     app.dependency_overrides.pop(get_redis, None)
+
+
+@pytest.fixture(autouse=True)
+def override_celery_database(db_session, monkeypatch):
+    test_celery_factory = async_sessionmaker(
+        bind=db_session.bind, expire_on_commit=False
+    )
+
+    monkeypatch.setattr(
+        "url_shortener.tasks.maintenance.celery_session_factory", test_celery_factory
+    )
+
+
+@pytest.fixture(autouse=True)
+async def override_mongo_collection(mongo_collection: AsyncCollection[dict[str, Any]]):
+    app.dependency_overrides[get_click_events_collection] = lambda: mongo_collection
+    yield
+    app.dependency_overrides.pop(get_click_events_collection, None)
+
+
+@pytest.fixture(autouse=True)
+def mock_event_publisher():
+    publisher = AsyncMock()
+    app.dependency_overrides[get_event_publisher] = lambda: publisher
+    yield publisher
+    app.dependency_overrides.pop(get_event_publisher, None)
 
 
 @pytest.fixture
@@ -178,17 +223,6 @@ def mock_celery_tasks():
         "url_shortener.tasks.emails.send_welcome_email_task.delay"
     ) as mock_delay:
         yield mock_delay
-
-
-@pytest.fixture(autouse=True)
-def override_celery_database(db_session, monkeypatch):
-    test_celery_factory = async_sessionmaker(
-        bind=db_session.bind, expire_on_commit=False
-    )
-
-    monkeypatch.setattr(
-        "url_shortener.tasks.maintenance.celery_session_factory", test_celery_factory
-    )
 
 
 @pytest.fixture
