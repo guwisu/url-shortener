@@ -6,8 +6,6 @@ from urllib.parse import urlparse
 
 import httpx
 
-logging.basicConfig(level=logging.INFO)
-
 log = logging.getLogger(__name__)
 
 
@@ -25,7 +23,7 @@ async def check_url_is_alive(
             addr_infos = await loop.getaddrinfo(hostname, None, type=socket.SOCK_STREAM)
 
             for info in addr_infos:
-                ip_str = info[4][0]
+                ip_str = str(info[4][0]).split("%")[0]
                 ip = ipaddress.ip_address(ip_str)
 
                 if not ip.is_global:

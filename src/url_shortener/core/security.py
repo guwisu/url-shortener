@@ -37,5 +37,5 @@ def decode_access_token(token: str) -> int | None:
                 algorithms=[settings.JWT_ALGORITHM],
             )["sub"]
         )
-    except jwt.PyJWTError:
+    except (jwt.PyJWTError, KeyError, ValueError, TypeError):
         return None

@@ -26,7 +26,7 @@ def get_link_repository(
     return LinkRepository(session)
 
 
-async def get_redis(request: Request) -> Redis:
+def get_redis(request: Request) -> Redis:
     return request.app.state.redis
 
 
@@ -69,7 +69,11 @@ async def get_current_user(
         )
     user = await repo.get_by_id(decoded_token)
     if not user:
-        raise HTTPException(status_code=401)
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return user
 
 
