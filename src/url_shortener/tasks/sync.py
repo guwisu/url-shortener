@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 async def process_single_key(
     processing_key: str, redis: Redis, session: AsyncSession
 ) -> None:
-    short_code = processing_key.split(":")[-1]
+    short_code = processing_key.removeprefix("processing:clicks:")
 
     clicks_raw = await redis.get(processing_key)
     if not clicks_raw:

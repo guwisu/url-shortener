@@ -1,4 +1,5 @@
 import contextlib
+import logging
 from typing import Any
 
 import uvicorn
@@ -37,6 +38,8 @@ async def lifespan(app: FastAPI):
     await kafka_producer.stop()
     await redis_client.aclose()
 
+
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="url-shortener", version="0.1.0", lifespan=lifespan)
 

@@ -4,8 +4,6 @@ import random
 
 from url_shortener.tasks.celery_app import celery_app
 
-logging.basicConfig(level=logging.INFO)
-
 log = logging.getLogger(__name__)
 
 

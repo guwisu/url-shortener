@@ -4,8 +4,6 @@ from aiokafka import AIOKafkaProducer
 
 from url_shortener.schemas.analytics import ClickEvent
 
-logging.basicConfig(level=logging.INFO)
-
 log = logging.getLogger(__name__)
 
 

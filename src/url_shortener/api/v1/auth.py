@@ -13,8 +13,6 @@ from url_shortener.tasks.emails import send_welcome_email_task
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-logging.basicConfig(level=logging.INFO)
-
 log = logging.getLogger(__name__)
 
 
