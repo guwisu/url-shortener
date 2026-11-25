@@ -7,6 +7,7 @@ from url_shortener.core.exceptions import (
     LinkNotFound,
     ServiceUnavailable,
 )
+from url_shortener.models import Link
 from url_shortener.repositories import LinkRepository
 from url_shortener.schemas import LinkResponse
 from url_shortener.schemas.links import RedirectTarget
@@ -18,6 +19,11 @@ class LinkService:
     def __init__(self, repository: LinkRepository, cache: LinkCache):
         self.repo = repository
         self.cache = cache
+
+    async def _finalize_created_link(self, link: Link) -> LinkResponse:
+        await self.repo.commit()
+        await self.cache.delete(link.short_code)
+        return LinkResponse.model_validate(link)
 
     async def create_link(
         self,
@@ -34,34 +40,25 @@ class LinkService:
             if not link:
                 raise AliasAlreadyExists
 
-            await self.repo.commit()
-            await self.cache.delete(alias)
-            return LinkResponse.model_validate(link)
-        else:
-            for _ in range(5):
-                short_code = generate_short_code()
-                if short_code in settings.SYSTEM_WORDS:
-                    continue
+            return await self._finalize_created_link(link)
 
-                link = await self.repo.add(
-                    user_id, original_url, short_code, expires_at
-                )
-                if not link:
-                    continue
+        for _ in range(5):
+            short_code = generate_short_code()
+            if short_code in settings.SYSTEM_WORDS:
+                continue
 
-                await self.repo.commit()
-                await self.cache.delete(short_code)
-                return LinkResponse.model_validate(link)
+            link = await self.repo.add(user_id, original_url, short_code, expires_at)
+            if link:
+                return await self._finalize_created_link(link)
 
-            raise ServiceUnavailable
+        raise ServiceUnavailable
 
-    async def get_by_code(self, user_id: int, code: str) -> LinkResponse | None:
+    async def get_by_code(self, user_id: int, code: str) -> LinkResponse:
         link = await self.repo.get_by_code(user_id, code)
         if not link:
             raise LinkNotFound
         response = LinkResponse.model_validate(link)
-        redis_clicks = await self.cache.get_clicks(code)
-        response.clicks_count += redis_clicks
+        response.clicks_count += await self.cache.get_clicks(code)
         return response
 
     async def redirect_by_code(self, code: str) -> RedirectTarget:
@@ -70,11 +67,11 @@ class LinkService:
             if cached_link.get("not_found") is True:
                 raise LinkNotFound
 
-            if not cached_link["is_active"]:
+            if not cached_link.get("is_active"):
                 raise LinkDeactivated
-            else:
-                await self.cache.increment_clicks(code)
-                return RedirectTarget(original_url=cached_link["original_url"])
+
+            await self.cache.increment_clicks(code)
+            return RedirectTarget(original_url=cached_link["original_url"])
 
         model = await self.repo.redirect_by_code(code)
 
@@ -107,7 +104,16 @@ class LinkService:
         self, user_id: int, skip: int, limit: int
     ) -> list[LinkResponse]:
         links = await self.repo.get_all_by_user(user_id, skip, limit)
-        return list(map(LinkResponse.model_validate, links))
+        responses = [LinkResponse.model_validate(link) for link in links]
+        if not responses:
+            return responses
+
+        pending_clicks = await self.cache.get_clicks_batch(
+            [r.short_code for r in responses]
+        )
+        for resp in responses:
+            resp.clicks_count += pending_clicks.get(resp.short_code, 0)
+        return responses
 
     async def delete_user_link(self, user_id: int, code: str) -> LinkResponse:
         result = await self.repo.delete_user_link(user_id, code)
