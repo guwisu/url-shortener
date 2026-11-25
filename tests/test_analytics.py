@@ -1,11 +1,15 @@
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 from httpx import AsyncClient
 from pymongo.asynchronous.collection import AsyncCollection
 
+from url_shortener.api.dependencies import get_event_publisher
+from url_shortener.main import app
 from url_shortener.schemas.analytics import ClickEvent
+from url_shortener.services.events import EventPublisher
 from url_shortener.tasks.consumer import write_click_events_batch
 
 
@@ -35,18 +39,20 @@ async def test_redirect_publishes_click_event(
     assert event.ip_hash != "127.0.0.1"
 
 
-async def test_redirect_survives_kafka_error(
-    auth_client_1: AsyncClient, mock_event_publisher
-) -> None:
+async def test_redirect_survives_kafka_error(auth_client_1: AsyncClient) -> None:
     create_resp = await auth_client_1.post(
         "/api/v1/links", json={"url": "https://example.com/kafka-down"}
     )
     code = create_resp.json()["short_code"]
 
-    mock_event_publisher.pubilsh_click.side_effect = RuntimeError("Kafka down")
+    failing_producer = AsyncMock()
+    failing_producer.send.side_effect = RuntimeError("Kafka down")
+    publisher = EventPublisher(producer=failing_producer, topic="clicks")
+    app.dependency_overrides[get_event_publisher] = lambda: publisher
 
     resp = await auth_client_1.get(f"/{code}")
     assert resp.status_code == 307
+    failing_producer.send.assert_awaited_once()
 
 
 async def test_consumer_batch_is_idempotent(
