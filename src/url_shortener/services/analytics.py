@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from pymongo.asynchronous.collection import AsyncCollection
@@ -33,9 +33,11 @@ class AnalyticsService:
         if from_dt or to_dt:
             ts_filter: dict[str, datetime] = {}
             if from_dt:
-                ts_filter["$gte"] = from_dt
+                ts_filter["$gte"] = (
+                    from_dt if from_dt.tzinfo else from_dt.replace(tzinfo=UTC)
+                )
             if to_dt:
-                ts_filter["$lte"] = to_dt
+                ts_filter["$lte"] = to_dt if to_dt.tzinfo else to_dt.replace(tzinfo=UTC)
             match_stage["timestamp"] = ts_filter
 
         pipeline: list[dict[str, Any]] = [

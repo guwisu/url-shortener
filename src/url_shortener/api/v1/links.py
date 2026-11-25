@@ -24,6 +24,13 @@ router = APIRouter(prefix="/links", tags=["links"])
 redirect_router = APIRouter(tags=["links"])
 
 
+def _get_client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
 @router.post("", response_model=LinkResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit("20/minute")
 async def create_link(
@@ -31,7 +38,7 @@ async def create_link(
     body: LinkCreate,
     current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[LinkService, Depends(get_link_service)],
-):
+) -> LinkResponse:
     return await service.create_link(
         current_user.id, str(body.url), body.alias, body.expires_at
     )
@@ -42,7 +49,7 @@ async def get_by_code(
     code: str,
     current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[LinkService, Depends(get_link_service)],
-):
+) -> LinkPublic:
     return await service.get_by_code(current_user.id, code)
 
 
@@ -53,19 +60,15 @@ async def redirect_by_code(
     background_tasks: BackgroundTasks,
     service: Annotated[LinkService, Depends(get_link_service)],
     publisher: Annotated[EventPublisher, Depends(get_event_publisher)],
-):
+) -> RedirectResponse:
     link = await service.redirect_by_code(code)
-
-    ip = request.client.host if request.client else "unknown"
-    referer = request.headers.get("referer")
-    user_agent = request.headers.get("user-agent")
 
     event = ClickEvent(
         short_code=code,
         timestamp=datetime.now(UTC),
-        ip_hash=hash_ip(ip),
-        referer=referer,
-        user_agent=user_agent,
+        ip_hash=hash_ip(_get_client_ip(request)),
+        referer=request.headers.get("referer"),
+        user_agent=request.headers.get("user-agent"),
     )
 
     background_tasks.add_task(publisher.publish_click, event)
@@ -75,7 +78,7 @@ async def redirect_by_code(
     )
 
 
-@router.get("")
+@router.get("", response_model=list[LinkResponse])
 async def get_all_by_user(
     current_user: Annotated[User, Depends(get_current_user)],
     service: Annotated[LinkService, Depends(get_link_service)],

@@ -1,3 +1,6 @@
+from collections.abc import Callable, Coroutine
+from typing import Any
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
@@ -13,40 +16,31 @@ from url_shortener.core.exceptions import (
 )
 
 
-async def link_not_found_handler(request: Request, exc: Exception):
-    return JSONResponse(status_code=404, content={"detail": "Link not found"})
+def _make_exception_handler(
+    status_code: int, detail: str
+) -> Callable[[Request, Exception], Coroutine[Any, Any, JSONResponse]]:
+    async def handler(request: Request, exc: Exception) -> JSONResponse:
+        return JSONResponse(status_code=status_code, content={"detail": detail})
 
-
-async def link_deactivated_handler(request: Request, exc: Exception):
-    return JSONResponse(
-        status_code=410, content={"detail": "Link has been expired or been deactivated"}
-    )
-
-
-async def user_already_exists_handler(request: Request, exc: Exception):
-    return JSONResponse(status_code=400, content={"detail": "Email already registered"})
-
-
-async def invalid_credentials_handler(request: Request, exc: Exception):
-    return JSONResponse(status_code=401, content={"detail": "Invalid credentials"})
-
-
-async def service_unavailable_handler(request: Request, exc: Exception):
-    return JSONResponse(
-        status_code=503,
-        content={"detail": "Service temporarily unavailable. Please try again."},
-    )
-
-
-async def alias_already_exists(request: Request, exc: Exception):
-    return JSONResponse(status_code=409, content={"detail": "Alias is already taken"})
+    return handler
 
 
 def setup_exception_handlers(app: FastAPI) -> None:
-    app.add_exception_handler(LinkNotFound, link_not_found_handler)
-    app.add_exception_handler(LinkDeactivated, link_deactivated_handler)
-    app.add_exception_handler(UserAlreadyExists, user_already_exists_handler)
-    app.add_exception_handler(InvalidCredentials, invalid_credentials_handler)
-    app.add_exception_handler(ServiceUnavailable, service_unavailable_handler)
+    handlers: list[tuple[type[Exception], int, str]] = [
+        (LinkNotFound, 404, "Link not found"),
+        (LinkDeactivated, 410, "Link has been expired or been deactivated"),
+        (UserAlreadyExists, 400, "Email already registered"),
+        (InvalidCredentials, 401, "Invalid credentials"),
+        (
+            ServiceUnavailable,
+            503,
+            "Service temporarily unavailable. Please try again.",
+        ),
+        (AliasAlreadyExists, 409, "Alias is already taken"),
+    ]
+    for exc_type, status_code, detail in handlers:
+        app.add_exception_handler(
+            exc_type, _make_exception_handler(status_code, detail)
+        )
+
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
-    app.add_exception_handler(AliasAlreadyExists, alias_already_exists)
